@@ -65,9 +65,20 @@
         <p id="ready-greeting-native" class="bilingual-native" style="margin-top:14px"></p>
         <p id="ready-greeting-ko"     class="bilingual-ko"></p>
 
-        <div class="cam-view" style="margin:20px 0">
-          <div class="cam-icon">📷</div>
-          <div class="cam-label">카메라 준비 완료</div>
+        <div class="cam-view" style="margin:20px 0" id="cam-view-box">
+          <!-- 카메라 로딩 중 -->
+          <div id="cam-loading" class="cam-placeholder">
+            <div class="cam-icon">📷</div>
+            <div class="cam-label">카메라 연결 중...</div>
+          </div>
+          <!-- 카메라 오류 -->
+          <div id="cam-error" class="cam-placeholder" style="display:none">
+            <div class="cam-icon">⚠️</div>
+            <div class="cam-label" id="cam-error-msg">카메라 접근 불가</div>
+          </div>
+          <!-- 라이브 프리뷰 -->
+          <video id="cam-video" autoplay playsinline muted style="display:none"></video>
+          <canvas id="cam-canvas" style="display:none"></canvas>
           <div class="corner tl"></div>
           <div class="corner tr"></div>
           <div class="corner bl"></div>
@@ -165,6 +176,11 @@
             <div id="pass-msg-native" class="tts-msg"></div>
             <div id="pass-msg-ko"     class="tts-msg-ko"></div>
           </div>
+          <!-- 자동 초기화 카운트다운 -->
+          <div class="auto-reset-bar">
+            <div id="auto-reset-fill" class="auto-reset-fill"></div>
+          </div>
+          <p id="auto-reset-label" class="caption" style="margin-bottom:12px"></p>
           <button id="btn-next-worker" class="btn-pass btn-lg">
             <span id="next-native"></span>
             <span id="next-ko" class="btn-sub"></span>
