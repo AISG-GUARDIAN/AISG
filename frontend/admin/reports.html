@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>보고서 — AISG</title>
+  <link rel="stylesheet" href="/assets/css/common.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+</head>
+<body>
+  <nav id="nav"></nav>
+  <main>
+    <h2>보고서</h2>
+    <select id="period">
+      <option value="daily">일간</option>
+      <option value="weekly">주간</option>
+      <option value="monthly">월간</option>
+    </select>
+    <button id="generateBtn">보고서 생성</button>
+    <div id="reportList"></div>
+  </main>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/admin/reports.js"></script>
+</body>
+</html>
