@@ -50,18 +50,22 @@ function flash() {
   o.classList.add("flash");
 }
 
-function speak(text) {
+function speak(text, repeat = 1) {
   if (!window.speechSynthesis) return;
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  // 언어 코드 매핑
   const langMap = {
     ko:"ko-KR", en:"en-US", zh:"zh-CN", vi:"vi-VN",
-    th:"th-TH", mn:"mn-MN", ru:"ru-RU", id:"id-ID",
+    th:"th-TH", km:"km-KH", mn:"mn-MN", ru:"ru-RU", id:"id-ID",
   };
-  u.lang = langMap[state.lang] || "ko-KR";
-  u.rate = 0.95;
-  speechSynthesis.speak(u);
+  let count = 0;
+  function fire() {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = langMap[state.lang] || "ko-KR";
+    u.rate = 0.95;
+    u.onend = () => { count++; if (count < repeat) fire(); };
+    speechSynthesis.speak(u);
+  }
+  fire();
 }
 
 function t(key) {
@@ -94,6 +98,7 @@ function initLangScreen() {
 function selectLang(code, flag) {
   state.lang = code;
   state.pin = "";
+  speak((T[code] || T["ko"]).greeting);
   initPinScreen(flag);
   showScreen("screen-pin");
 }
@@ -480,7 +485,7 @@ function showFailScreen({ helmetOk, vestOk }) {
     $("escalation-box").style.display = "none";
   }
 
-  speak(t("ttsFailed") + ". " + t("failMsg"));
+  speak(t("ttsFailed") + ". " + t("failMsg"), 3);
   showScreen("screen-fail");
 }
 
