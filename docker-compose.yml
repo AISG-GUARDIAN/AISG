@@ -1,20 +1,18 @@
-# AISG 안전 체크 시스템 — Docker Compose 설정
-# backend + frontend를 단일 서비스로 실행한다 (FastAPI가 정적 파일 서빙)
+version: '3.8'
 
 services:
-  app:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+  backend:
+    build: ./backend
     ports:
-      - "8001:8000"
+      - "8000:8000"
     volumes:
-      # frontend 디렉토리를 컨테이너 내 backend 상위 경로에 마운트
-      - ./frontend:/frontend:ro
-      # SQLite DB 파일 영속화
-      - ./data:/app/data
-    env_file:
-      - ./backend/.env
-    environment:
-      - DATABASE_URL=sqlite:///./data/safety_check.db
-    restart: unless-stopped
+      - ./backend:/app
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
