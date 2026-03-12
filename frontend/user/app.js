@@ -19,6 +19,15 @@ const API_BASE = "";       // 백엔드 동일 origin
 /* ── 유틸 ────────────────────────────────────── */
 const $ = (id) => document.getElementById(id);
 
+const SCREEN_BODY_CLASS = {
+  "screen-lang":     "screen-lang",
+  "screen-pin":      "screen-pin",
+  "screen-ready":    "screen-ready",
+  "screen-scanning": "screen-scanning",
+  "screen-pass":     "screen-pass",
+  "screen-fail":     "screen-fail",
+};
+
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach((s) =>
     s.classList.remove("active", "fade-in")
@@ -26,6 +35,9 @@ function showScreen(id) {
   const el = $(id);
   el.classList.add("active", "fade-in");
   $("btn-reset").style.display = id === "screen-lang" ? "none" : "";
+
+  // body 클래스로 화면별 테마 적용
+  document.body.className = SCREEN_BODY_CLASS[id] || "";
 
   // 카메라 준비 화면 아닐 때 스트림 중지
   if (id !== "screen-ready") stopCamera();
@@ -115,6 +127,15 @@ function handleNumKey(k) {
   if (k === "⌫") { state.pin = state.pin.slice(0, -1); }
   else if (state.pin.length < 4) { state.pin += k; }
   updatePinDisplay();
+
+  // 4자리 완성 → 400ms 후 자동 진행
+  if (state.pin.length === 4) {
+    setTimeout(() => {
+      initReadyScreen();
+      showScreen("screen-ready");
+      startCamera();
+    }, 400);
+  }
 }
 
 function updatePinDisplay() {
@@ -135,7 +156,14 @@ $("btn-back-pin").addEventListener("click", () => {
 });
 
 $("btn-confirm-pin").addEventListener("click", () => {
-  if (state.pin.length < 4) return;
+  if (state.pin.length < 4) {
+    // shake 애니메이션
+    const dots = $("pin-dots");
+    dots.classList.remove("shake");
+    void dots.offsetWidth;
+    dots.classList.add("shake");
+    return;
+  }
   initReadyScreen();
   showScreen("screen-ready");
   startCamera();
@@ -426,8 +454,9 @@ function showFailScreen({ helmetOk, vestOk }) {
     ol.appendChild(li);
   });
 
-  $("retry-native").textContent = t("retryBtn");
-  $("retry-ko").textContent     = state.lang !== "ko" ? "다시 시도" : "";
+  // 재시도 버튼에 시도 횟수 표시
+  $("retry-native").textContent = `🔄 ${t("retryBtn")} (${state.failCount}/3)`;
+  $("retry-ko").textContent     = state.lang !== "ko" ? `재시도 (${state.failCount}/3)` : "";
 
   // 3회 이상 실패 → 에스컬레이션
   if (state.failCount >= 3) {
