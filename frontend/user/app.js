@@ -79,6 +79,16 @@ function initLangScreen() {
     btn.addEventListener("click", () => selectLang(code, flag));
     grid.appendChild(btn);
   });
+  // 3열 기준으로 마지막 행 빈 칸 채우기
+  const remainder = LANGUAGES.length % 3;
+  if (remainder !== 0) {
+    const empty = 3 - remainder;
+    for (let i = 0; i < empty; i++) {
+      const spacer = document.createElement("div");
+      spacer.className = "lang-btn-spacer";
+      grid.appendChild(spacer);
+    }
+  }
 }
 
 function selectLang(code, flag) {

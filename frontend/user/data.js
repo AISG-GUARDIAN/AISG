@@ -1,18 +1,15 @@
 /* ──────────────────────────────────────────────────
    data.js  — 다국어 텍스트 + 언어 목록
-   지원: 한국어 / English / 中文 / Tiếng Việt /
-         ภาษาไทย / Монгол / Русский / Bahasa
+   지원: Tiếng Việt / 中文 / ខ្មែរ / ภาษาไทย / 한국어
+   3열 그리드, 5개 버튼 + 6번째 빈 칸
 ────────────────────────────────────────────────── */
 
 const LANGUAGES = [
-  { code: "ko", flag: "🇰🇷", label: "한국어" },
-  { code: "en", flag: "🇺🇸", label: "English" },
-  { code: "zh", flag: "🇨🇳", label: "中文" },
   { code: "vi", flag: "🇻🇳", label: "Tiếng Việt" },
+  { code: "zh", flag: "🇨🇳", label: "中文" },
+  { code: "km", flag: "🇰🇭", label: "ខ្មែរ" },
   { code: "th", flag: "🇹🇭", label: "ภาษาไทย" },
-  { code: "mn", flag: "🇲🇳", label: "Монгол" },
-  { code: "ru", flag: "🇷🇺", label: "Русский" },
-  { code: "id", flag: "🇮🇩", label: "Bahasa" },
+  { code: "ko", flag: "🇰🇷", label: "한국어" },
 ];
 
 const T = {
@@ -207,5 +204,29 @@ const T = {
     escalationKo:     "연속 3회 실패 — 담당자가 곧 도착합니다.",
     ttsPassed:   "Lulus",
     ttsFailed:   "Tidak Lulus",
+  },
+  km: {
+    pinPrompt:    "បញ្ចូលលេខទូរស័ព្ទ 4 ខ្ទង់ចុងក្រោយ",
+    greeting:     "សួស្តី!",
+    helmetName:   "មួកសុវត្ថិភាព",
+    vestName:     "អាវក្រៅសុវត្ថិភាព",
+    wearCheck:    "តម្រូវឱ្យពាក់",
+    scanLabel:    "កំពុងពិនិត្យ PPE…",
+    startScan:    "ចាប់ផ្តើមស្កែន",
+    passMsg:      "ការពិនិត្យ PPE បានបញ្ចប់! សូមឱ្យមានសុវត្ថិភាព។",
+    failMsg:      "រកឃើញ PPE មិនគ្រប់គ្រាន់។ សូមពាក់ហើយព្យាយាមម្តងទៀត។",
+    retryBtn:     "ព្យាយាមម្តងទៀត",
+    nextBtn:      "កម្មករបន្ទាប់",
+    resetBtn:     "ត្រឡប់ទៅដើម",
+    guidTitle:    "របៀបពាក់ PPE",
+    guide: [
+      "ពាក់មួកសុវត្ថិភាពឱ្យបានត្រឹមត្រូវ។",
+      "ពាក់អាវក្រៅហើយចាក់ស្ទូច។",
+      "ងាកមុខទៅកាមេរ៉ាហើយថតរូប។",
+    ],
+    escalationNative: "កំពុងហៅអ្នកគ្រប់គ្រង។",
+    escalationKo:     "연속 3회 실패 — 담당자가 곧 도착합니다.",
+    ttsPassed:   "ជាប់",
+    ttsFailed:   "ធ្លាក់",
   },
 };
