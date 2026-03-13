@@ -526,3 +526,99 @@ button:not(:disabled):active { transform: scale(.97); }
   /* 푸터 */
   #footer { padding: 14px; font-size: 13px; }
 }
+
+/* 아이패드 12.9" (min-width: 1024px) */
+@media (min-width: 1024px) {
+  html, body { font-size: 20px; }
+
+  #app { max-width: 860px; }
+
+  /* 헤더 */
+  #header { padding: 22px 36px; }
+  .header-icon  { font-size: 40px; }
+  .header-title { font-size: 20px; letter-spacing: 1.2px; }
+  .header-sub   { font-size: 14px; }
+
+  /* 메인 */
+  #main { padding: 48px 48px 72px; }
+
+  /* 타이포 */
+  .title-xl         { font-size: 52px; }
+  .sub-text         { font-size: 20px; }
+  .bilingual-native { font-size: 30px; }
+  .bilingual-ko     { font-size: 18px; }
+  .caption          { font-size: 16px; }
+
+  /* ① 언어 선택 */
+  .lang-grid { gap: 24px; }
+  .lang-btn  { padding: 40px 16px; border-radius: 22px; }
+  .lang-flag { font-size: 72px; margin-bottom: 14px; }
+  .lang-label { font-size: 20px; }
+
+  /* ② PIN */
+  .flag-xl     { font-size: 88px; margin-bottom: 22px; }
+  .pin-dots    { gap: 32px; margin: 36px 0 24px; }
+  .pin-dot     { width: 36px; height: 36px; }
+  .pin-masking { font-size: 24px; padding: 18px 28px; margin-bottom: 36px; }
+  .numpad      { max-width: 500px; gap: 18px; }
+  .num-key     { padding: 32px 12px; font-size: 38px; border-radius: 18px; }
+  .num-key.del { font-size: 28px; }
+
+  /* 버튼 공통 */
+  button     { padding: 22px 28px; font-size: 20px; border-radius: 18px; }
+  .btn-lg    { padding: 28px 32px; font-size: 24px; }
+  .btn-sub   { font-size: 15px; margin-top: 5px; }
+  .btn-ghost { font-size: 18px; }
+
+  /* ③ 카메라 준비 */
+  .cam-view        { min-height: 460px; border-radius: 22px; }
+  .cam-placeholder { min-height: 460px; }
+  .cam-icon        { font-size: 72px; }
+  .cam-label       { font-size: 20px; }
+  #cam-video       { height: 460px; border-radius: 22px; }
+  .ppe-card        { padding: 24px 18px; border-radius: 22px; }
+  .ppe-emoji       { font-size: 48px; margin-bottom: 10px; }
+  .ppe-name        { font-size: 20px; }
+  .ppe-name-ko     { font-size: 14px; }
+  .ppe-check       { font-size: 18px; }
+  .ppe-check-ko    { font-size: 13px; }
+  .pin-badge       { font-size: 18px; padding: 10px 26px; }
+  .corner          { width: 28px; height: 28px; }
+
+  /* ④ 스캔 중 */
+  .scan-view { height: 480px; border-radius: 22px; }
+  .person-head { width: 70px; height: 70px; }
+  .person-body { width: 116px; height: 174px; }
+  .ppe-box-overlay.helmet { width: 96px; height: 50px; top: 42px; }
+  .ppe-box-overlay.vest   { width: 136px; height: 128px; top: 166px; }
+  .scan-label    { font-size: 26px; }
+  .scan-label-ko { font-size: 18px; }
+  .progress-track { height: 10px; }
+  .prog-label, .prog-pct { font-size: 16px; }
+  .progress-wrap { margin-bottom: 20px; }
+  .ppe-status  { padding: 18px 22px; border-radius: 18px; gap: 16px; }
+  .status-icon { font-size: 30px; }
+  .status-name { font-size: 20px; }
+  .status-ko   { font-size: 15px; }
+  .status-tag  { font-size: 15px; padding: 6px 18px; }
+
+  /* ⑤⑥ PASS / FAIL */
+  .result-card  { padding: 60px 48px; border-radius: 28px; }
+  .result-emoji { font-size: 96px; margin-bottom: 18px; }
+  .result-title { font-size: 64px; letter-spacing: 7px; }
+  .result-ppe-info { font-size: 20px; margin-bottom: 14px; }
+  .tts-box   { padding: 20px 24px; border-radius: 18px; margin: 18px 0; }
+  .tts-label { font-size: 14px; letter-spacing: 1.2px; }
+  .tts-msg   { font-size: 22px; }
+  .tts-msg-ko { font-size: 17px; }
+  .guide-title { font-size: 16px; margin-bottom: 12px; }
+  .guide-list li { font-size: 18px; margin-bottom: 10px; }
+  .escalation-box { padding: 22px; margin-top: 20px; }
+  .escalation-text { font-size: 22px; }
+  .escalation-ko   { font-size: 17px; }
+  .auto-reset-bar  { height: 8px; margin: 22px 0 9px; }
+  .result-pin-badge { font-size: 17px; padding: 8px 20px; }
+
+  /* 푸터 */
+  #footer { padding: 18px; font-size: 15px; }
+}
