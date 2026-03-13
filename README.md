@@ -46,6 +46,11 @@ uv run uvicorn app.main:app --reload
 
 5. 브라우저에서 `http://localhost:8000` 접속
 
+6. 테스트용 시드 데이터 삽입
+```bash
+python test_seed.py
+```
+
 
 ### Docker Compose로 실행하기
 

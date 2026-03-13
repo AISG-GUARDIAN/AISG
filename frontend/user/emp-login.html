@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Safe Guardian — 사원번호 로그인</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="../assets/css/user-style.css" />
 </head>
+
 <body class="screen-pin">
 
   <div id="app">
@@ -26,15 +28,8 @@
         <p class="bilingual-native">사원번호를 입력하세요</p>
         <p class="bilingual-ko" id="emp-sub" style="margin-bottom:8px"></p>
 
-        <input
-          id="emp-input"
-          class="emp-input"
-          type="text"
-          maxlength="10"
-          placeholder="사원번호 입력"
-          autocomplete="off"
-          inputmode="numeric"
-        />
+        <input id="emp-input" class="emp-input" type="text" maxlength="10" placeholder="사원번호 입력" autocomplete="off"
+          inputmode="numeric" />
 
         <div class="emp-btn-wrap">
           <button id="btn-back" class="btn-outline">← 뒤로</button>
@@ -52,6 +47,8 @@
     </footer>
 
   </div>
-<script src="app.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/user/app.js"></script>
 </body>
+
 </html>

@@ -26,10 +26,10 @@ def generate_system_id(db: Session, last_call_number: str) -> str:
     today_str = date.today().strftime("%Y%m%d")
     prefix = f"USR-{today_str}-"
 
-    # 오늘 발급된 마지막 순번 조회
+    # 오늘 발급된 해당 전화번호의 마지막 순번 조회
     last_user = (
         db.query(User)
-        .filter(User.system_id.like(f"{prefix}%"))
+        .filter(User.system_id.like(f"{prefix}{last_call_number}-%"))
         .order_by(User.system_id.desc())
         .first()
     )

@@ -1,6 +1,7 @@
 """
 체크인 세션 관리 라우터.
 당일 체크인 현황 조회 및 관리자 오버라이드(수동 통과).
+User(일용직)와 Employee(정규직) 세션 모두 포함한다.
 
 엔드포인트:
 - GET  /admin/sessions              — 체크인 세션 목록
@@ -19,6 +20,7 @@ from app.models.admin import Admin
 from app.models.admin_override import AdminOverride
 from app.models.audit_log import AuditLog
 from app.models.check_session import CheckSession
+from app.models.employee import Employee
 from app.models.group import Group
 from app.models.user import User
 from app.schemas.check_session import OverrideRequest, SessionResponse
@@ -33,7 +35,7 @@ def list_sessions(
     admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
-    """GET /admin/sessions?target_date=2026-03-12&group_id=1 — 체크인 세션 목록."""
+    """GET /admin/sessions — User + Employee 체크인 세션 목록."""
     if target_date is None:
         query_date = date.today()
     else:
@@ -41,33 +43,57 @@ def list_sessions(
 
     admin_group_ids = [g.id for g in db.query(Group).filter(Group.admin_id == admin.id).all()]
 
-    query = (
+    if group_id is not None and group_id not in admin_group_ids:
+        raise HTTPException(status_code=403, detail="해당 그룹에 접근 권한이 없습니다")
+
+    filter_groups = [group_id] if group_id else admin_group_ids
+
+    # User 세션
+    user_sessions = (
         db.query(CheckSession)
         .join(User, CheckSession.user_id == User.id)
-        .filter(User.group_id.in_(admin_group_ids), CheckSession.date == query_date)
+        .filter(User.group_id.in_(filter_groups), CheckSession.date == query_date)
+        .all()
+    )
+    # Employee 세션
+    emp_sessions = (
+        db.query(CheckSession)
+        .join(Employee, CheckSession.employee_id == Employee.id)
+        .filter(Employee.group_id.in_(filter_groups), CheckSession.date == query_date)
+        .all()
     )
 
-    if group_id is not None:
-        if group_id not in admin_group_ids:
-            raise HTTPException(status_code=403, detail="해당 그룹에 접근 권한이 없습니다")
-        query = query.filter(User.group_id == group_id)
+    all_sessions = user_sessions + emp_sessions
+    all_sessions.sort(key=lambda s: s.checked_at or s.id, reverse=True)
 
-    sessions = query.order_by(CheckSession.checked_at.desc()).all()
-
-    user_ids = [s.user_id for s in sessions]
-    users_map = {u.id: u for u in db.query(User).filter(User.id.in_(user_ids)).all()}
+    # User/Employee 매핑 캐시
+    user_ids = [s.user_id for s in all_sessions if s.user_id]
+    emp_ids = [s.employee_id for s in all_sessions if s.employee_id]
+    users_map = {u.id: u for u in db.query(User).filter(User.id.in_(user_ids)).all()} if user_ids else {}
+    emps_map = {e.id: e for e in db.query(Employee).filter(Employee.id.in_(emp_ids)).all()} if emp_ids else {}
     group_map = {g.id: g.name for g in db.query(Group).filter(Group.id.in_(admin_group_ids)).all()}
 
     result = []
-    for s in sessions:
-        user = users_map.get(s.user_id)
+    for s in all_sessions:
+        gid = None
+        if s.user_id:
+            user = users_map.get(s.user_id)
+            gid = user.group_id if user else None
+        elif s.employee_id:
+            emp = emps_map.get(s.employee_id)
+            gid = emp.group_id if emp else None
+
         override = s.override
         result.append(SessionResponse(
-            id=s.id, user_id=s.user_id,
-            group_name=group_map.get(user.group_id, "") if user else "",
-            date=s.date, attempt_count=s.attempt_count,
-            helmet_pass=s.helmet_pass, vest_pass=s.vest_pass,
-            cv_confidence=s.cv_confidence, image_url=s.image_url,
+            id=s.id,
+            user_id=s.user_id or s.employee_id or 0,
+            group_name=group_map.get(gid, "") if gid else "",
+            date=s.date,
+            attempt_count=s.attempt_count,
+            helmet_pass=s.helmet_pass,
+            vest_pass=s.vest_pass,
+            cv_confidence=s.cv_confidence,
+            image_url=s.image_url,
             status=s.status,
             override_reason=override.reason if override else None,
             checked_at=s.checked_at,
@@ -85,6 +111,7 @@ def override_session(
     """
     POST /admin/sessions/{id}/override
     3회 실패한 세션을 관리자가 수동 통과(pass_override) 처리한다.
+    User와 Employee 세션 모두 지원한다.
 
     요청: { reason?: "통과 사유" }
     """
@@ -92,8 +119,17 @@ def override_session(
     if not session:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
 
-    user = db.query(User).filter(User.id == session.user_id).first()
-    group = db.query(Group).filter(Group.id == user.group_id, Group.admin_id == admin.id).first()
+    # 권한 확인 — User 또는 Employee의 그룹이 관리자 소속인지 검증
+    group = None
+    if session.user_id:
+        user = db.query(User).filter(User.id == session.user_id).first()
+        if user:
+            group = db.query(Group).filter(Group.id == user.group_id, Group.admin_id == admin.id).first()
+    elif session.employee_id:
+        emp = db.query(Employee).filter(Employee.id == session.employee_id).first()
+        if emp:
+            group = db.query(Group).filter(Group.id == emp.group_id, Group.admin_id == admin.id).first()
+
     if not group:
         raise HTTPException(status_code=403, detail="해당 세션에 접근 권한이 없습니다")
 
@@ -121,7 +157,9 @@ def override_session(
         target_type="check_session",
         target_id=session.id,
         detail=json.dumps({
-            "user_id": user.id, "reason": body.reason,
+            "user_id": session.user_id,
+            "employee_id": session.employee_id,
+            "reason": body.reason,
         }, ensure_ascii=False),
     )
     db.add(audit)
@@ -129,11 +167,15 @@ def override_session(
     db.refresh(session)
 
     return SessionResponse(
-        id=session.id, user_id=session.user_id,
+        id=session.id,
+        user_id=session.user_id or session.employee_id or 0,
         group_name=group.name,
-        date=session.date, attempt_count=session.attempt_count,
-        helmet_pass=session.helmet_pass, vest_pass=session.vest_pass,
-        cv_confidence=session.cv_confidence, image_url=session.image_url,
+        date=session.date,
+        attempt_count=session.attempt_count,
+        helmet_pass=session.helmet_pass,
+        vest_pass=session.vest_pass,
+        cv_confidence=session.cv_confidence,
+        image_url=session.image_url,
         status=session.status,
         override_reason=override.reason,
         checked_at=session.checked_at,
