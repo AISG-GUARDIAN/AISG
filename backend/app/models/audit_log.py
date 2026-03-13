@@ -6,7 +6,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import ForeignKey, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column,relationship
 
 from app.database import Base
 
@@ -18,7 +18,7 @@ class AuditLog(Base):
     Attributes:
         id: 기본키
         admin_id: 수행 관리자 FK
-        admin_name: 수행 관리자 이름 FK
+        admin_emp_no: 수행 관리자 사원번호 FK
         action: 수행 행위 (override_pass, user_create, group_create 등)
         target_type: 대상 유형 (check_session, user, group 등)
         target_id: 대상 레코드 ID
@@ -32,7 +32,9 @@ class AuditLog(Base):
     admin_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("admins.id", ondelete="RESTRICT"), nullable=False
     )
-    admin_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    admin_emp_no: Mapped[str] = mapped_column(
+        String(10), ForeignKey("admins.emp_no", ondelete="RESTRICT"), nullable=False
+    )
     action: Mapped[str] = mapped_column(String(50), nullable=False)
     target_type: Mapped[str] = mapped_column(String(50), nullable=False)
     target_id: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -40,3 +42,5 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         default=lambda: datetime.now(timezone.utc)
     )
+
+    admin = relationship("Admin", foreign_keys=[admin_id])

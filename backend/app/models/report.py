@@ -6,7 +6,7 @@ LLM이 생성한 일/주/월 통계 보고서를 저장한다.
 from datetime import date, datetime, timezone
 
 from sqlalchemy import Date, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -46,3 +46,6 @@ class Report(Base):
     created_at: Mapped[datetime] = mapped_column(
         default=lambda: datetime.now(timezone.utc)
     )
+
+    # 관계
+    admin = relationship("Admin", back_populates="reports")

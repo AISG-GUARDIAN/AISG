@@ -18,9 +18,8 @@ class AdminOverride(Base):
     Attributes:
         id: 기본키
         session_id: 대상 체크인 세션 FK
-        admin_id: 처리한 관리자 FK (admins.id)
+        admin_id: 처리한 관리자 FK
         admin_emp_no: 처리한 관리자 사번 (비정규화)
-        admin_name: 처리한 관리자 이름 (비정규화)
         reason: 통과 사유 (선택)
         overridden_at: 처리 시각
     """
@@ -29,13 +28,12 @@ class AdminOverride(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     session_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("check_sessions.id", ondelete="RESTRICT"), nullable=False
+        Integer, ForeignKey("check_sessions.id", ondelete="RESTRICT"), nullable=False, unique=True
     )
     admin_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("admins.id", ondelete="RESTRICT"), nullable=False
     )
-    admin_emp_no: Mapped[str] = mapped_column(String(50), nullable=False)
-    admin_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    admin_emp_no: Mapped[str] = mapped_column(String(10), nullable=False)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     overridden_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
@@ -43,3 +41,4 @@ class AdminOverride(Base):
 
     # 관계
     session = relationship("CheckSession", back_populates="override")
+    admin = relationship("Admin")

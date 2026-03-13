@@ -39,7 +39,6 @@ class SessionResponse(BaseModel):
     Attributes:
         id: 세션 ID
         user_id: 작업자 ID
-        user_name: 작업자 이름
         group_name: 소속 그룹명
         date: 체크인 날짜
         attempt_count: 시도 횟수
@@ -54,8 +53,7 @@ class SessionResponse(BaseModel):
 
     id: int
     user_id: int
-    user_name: str = ""
-    group_name: str = ""
+    group_name: str | None = None
     date: date
     attempt_count: int
     helmet_pass: bool | None
