@@ -117,6 +117,9 @@
 
         <div class="scan-view">
           <div class="scan-bg"></div>
+          <!-- 실시간 웹캠 피드 -->
+          <video id="webcam" autoplay playsinline muted></video>
+          <canvas id="overlay"></canvas>
           <div class="person-silhouette">
             <div class="person-head"></div>
             <div class="person-body"></div>
@@ -234,7 +237,10 @@
 
   </div>
 
+  <canvas id="captureCanvas" style="display:none"></canvas>
+
   <script src="data.js"></script>
+  <script src="webrtc.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

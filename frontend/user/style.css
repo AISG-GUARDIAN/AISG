@@ -335,12 +335,32 @@ button:not(:disabled):active { transform: scale(.97); }
   border: 1.5px solid #2A4055; border-bottom: none;
 }
 
+/* 스캔 화면 실시간 웹캠 */
+#webcam {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* 셀피 미러링 */
+  z-index: 1;
+}
+#overlay {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  transform: scaleX(-1);
+  pointer-events: none;
+  z-index: 2;
+}
+/* 웹캠이 켜지면 실루엣/배경 숨김 */
+.scan-view.webcam-active .scan-bg,
+.scan-view.webcam-active .person-silhouette { display: none; }
+
 /* PPE 감지 박스 */
 .ppe-box-overlay {
   position: absolute;
   border: 2px solid var(--accent);
   border-radius: 4px;
   transition: border-color .35s;
+  z-index: 3;
 }
 .ppe-box-overlay.detected { border-color: var(--green); }
 .ppe-box-overlay.missing  { border-color: var(--red); }
@@ -360,6 +380,7 @@ button:not(:disabled):active { transform: scale(.97); }
 /* 스캔 라인 */
 .scan-line {
   position: absolute; left: 0; right: 0; height: 2px;
+  z-index: 4;
   background: linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
   box-shadow: 0 0 10px var(--accent);
   animation: scan-move 1.5s linear infinite;
