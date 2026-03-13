@@ -159,7 +159,7 @@ body.screen-lang #main { background: var(--bg); }
   transform: translateY(-4px);
 }
 .lang-btn:active { transform: translateY(-2px); }
-.lang-flag  { font-size: 32px; display: block; margin-bottom: 8px; }
+.lang-flag  { width: 52px; height: auto; display: block; margin: 0 auto 8px; border-radius: 4px; }
 .lang-label { font-size: 13px; font-weight: 600; color: var(--text); }
 
 /* 빈 칸 스페이서 */
@@ -171,7 +171,8 @@ body.screen-lang #main { background: var(--bg); }
 }
 
 /* ── ② PIN 입력 ──────────────────────────────── */
-.flag-xl { font-size: 50px; text-align: center; margin-bottom: 14px; }
+.flag-xl { text-align: center; margin-bottom: 14px; }
+.flag-xl img { width: 80px; height: auto; border-radius: 6px; }
 
 .pin-dots { display: flex; justify-content: center; gap: 18px; margin: 20px 0 14px; }
 .pin-dot {
@@ -246,6 +247,12 @@ button:not(:disabled):active { transform: scale(.97); }
 .btn-ghost-lg { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); width: 100%; margin-top: 12px; }
 .btn-lg       { padding: 18px 20px; font-size: 17px; width: 100%; }
 .btn-sub      { display: block; font-size: 12px; font-weight: 400; opacity: .8; margin-top: 3px; }
+
+/* 촬영시작 버튼 — 컴팩트 & 전체폭 */
+#btn-start-scan {
+  width: 100%; flex: none;
+  padding: 10px 20px; font-size: 14px;
+}
 
 /* ── ③ 카메라 준비 ───────────────────────────── */
 .pin-badge {
@@ -396,7 +403,7 @@ button:not(:disabled):active { transform: scale(.97); }
 
 /* ── ⑤ PASS 카드 ─────────────────────────────── */
 .result-card {
-  border-radius: var(--radius); padding: 28px 20px; text-align: center;
+  border-radius: var(--radius); padding: 20px 20px; text-align: center;
   box-shadow: var(--shadow-lg);
 }
 .pass-card {
@@ -410,8 +417,8 @@ button:not(:disabled):active { transform: scale(.97); }
   box-shadow: 0 0 40px rgba(239,68,68,.07), var(--shadow-lg);
 }
 
-.result-emoji { font-size: 52px; margin-bottom: 10px; }
-.result-title { font-size: 34px; font-weight: 900; letter-spacing: 4px; margin-bottom: 14px; }
+.result-emoji { font-size: 44px; margin-bottom: 6px; }
+.result-title { font-size: 30px; font-weight: 900; letter-spacing: 4px; margin-bottom: 10px; }
 .pass-title   { color: var(--green-text); }
 .fail-title   { color: var(--red-text); }
 
@@ -436,13 +443,13 @@ button:not(:disabled):active { transform: scale(.97); }
 .tts-msg-ko { font-size: 12px; color: var(--text2); margin-top: 3px; }
 
 /* 자동 초기화 바 */
-.auto-reset-bar  { height: 4px; background: rgba(0,0,0,.08); border-radius: 2px; overflow: hidden; margin: 14px 0 5px; }
+.auto-reset-bar  { height: 4px; background: rgba(0,0,0,.08); border-radius: 2px; overflow: hidden; margin: 10px 0 4px; }
 .auto-reset-fill { height: 100%; background: var(--green-dark); border-radius: 2px; width: 100%; }
 
 /* 가이드 박스 */
 .guide-box {
   background: rgba(244,124,32,.05); border: 1px solid rgba(244,124,32,.15);
-  border-radius: var(--r-sm); padding: 14px; margin: 12px 0; text-align: left;
+  border-radius: var(--r-sm); padding: 10px 14px; margin: 8px 0; text-align: left;
 }
 .guide-title { font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
 .guide-list  { padding-left: 16px; }
@@ -498,12 +505,12 @@ button:not(:disabled):active { transform: scale(.97); }
     flex-direction: column;
     overflow: hidden;          /* 스크롤 완전 제거 */
   }
-  /* PASS/FAIL 결과 카드 — 내용 길면 카드 내부만 스크롤 허용 */
+  /* PASS/FAIL 결과 카드 — 스크롤 없이 한 화면에 표시 */
   #screen-pass.active,
-  #screen-fail.active { overflow-y: auto; }
+  #screen-fail.active { overflow: hidden; }
   /* 카메라/스캔 뷰가 남은 공간을 채움 */
   #cam-view-box {
-    flex: 1;
+    flex: 3;
     height: auto !important;
     min-height: 0;
     margin: 8px 0;
@@ -522,33 +529,35 @@ button:not(:disabled):active { transform: scale(.97); }
   .header-sub   { font-size: 11px; }
   .title-xl         { font-size: 38px; }
   .sub-text         { font-size: 17px; }
-  .bilingual-native { font-size: 24px; }
-  .bilingual-ko     { font-size: 15px; }
+  .bilingual-native { font-size: min(22px, 2.8dvh); }
+  .bilingual-ko     { font-size: min(14px, 1.8dvh); }
   .caption          { font-size: 14px; }
   .lang-grid { gap: 18px; }
   .lang-btn  { padding: 28px 12px; border-radius: 18px; }
-  .lang-flag { font-size: 52px; margin-bottom: 10px; }
+  .lang-flag { width: 68px; margin-bottom: 10px; }
   .lang-label { font-size: 16px; }
-  .flag-xl     { font-size: 58px; margin-bottom: 10px; }
-  .pin-dots    { gap: 22px; margin: 16px 0 12px; }
+  .flag-xl img { width: min(90px, 11dvh); border-radius: 8px; }
+  .flag-xl     { margin-bottom: min(10px, 1dvh); }
+  .pin-dots    { gap: 22px; margin: min(16px, 1.5dvh) 0 min(12px, 1dvh); }
   .pin-dot     { width: 26px; height: 26px; }
-  .pin-masking { font-size: 18px; padding: 10px 18px; margin-bottom: 18px; }
-  .numpad      { max-width: 400px; gap: 10px; }
-  .num-key     { padding: 24px 10px; font-size: 30px; border-radius: 14px; }
+  .pin-masking { font-size: 18px; padding: min(10px, 1dvh) 18px; margin-bottom: min(18px, 1.5dvh); }
+  .numpad      { max-width: 400px; gap: min(10px, 1dvh); }
+  .num-key     { padding: min(24px, 2.2dvh) 10px; font-size: 30px; border-radius: 14px; }
   .num-key.del { font-size: 22px; }
-  button     { padding: 18px 22px; font-size: 17px; border-radius: 14px; }
-  .btn-lg    { padding: 22px 24px; font-size: 20px; }
-  .btn-sub   { font-size: 13px; margin-top: 4px; }
+  button     { padding: min(13px, 1.6dvh) 22px; font-size: 17px; border-radius: 14px; }
+  .btn-lg    { padding: min(16px, 2dvh) 24px; font-size: 19px; }
+  .btn-sub   { font-size: 12px; margin-top: 3px; }
   .btn-ghost { font-size: 15px; }
+  #btn-start-scan  { padding: min(10px, 1.2dvh) 22px; font-size: 15px; }
   .cam-view        { min-height: 0; height: min(36vh, 320px); border-radius: 18px; }
   .cam-placeholder { min-height: 0; height: 100%; }
   .cam-icon        { font-size: 48px; }
   .cam-label       { font-size: 15px; }
   #cam-video       { height: 100%; border-radius: 18px; }
-  .ppe-card        { padding: 12px 10px; border-radius: 14px; }
-  .ppe-emoji       { font-size: 28px; margin-bottom: 4px; }
-  .ppe-name        { font-size: 15px; }
-  .ppe-check       { font-size: 13px; margin-top: 3px; }
+  .ppe-card        { padding: min(10px, 1.2dvh) 10px; border-radius: 14px; }
+  .ppe-emoji       { font-size: min(26px, 3dvh); margin-bottom: 3px; }
+  .ppe-name        { font-size: 14px; }
+  .ppe-check       { font-size: 12px; margin-top: 2px; }
   .pin-badge       { font-size: 14px; padding: 6px 16px; }
   .scan-view { height: min(38vh, 340px); border-radius: 18px; }
   .person-head { width: 54px; height: 54px; }
@@ -559,23 +568,23 @@ button:not(:disabled):active { transform: scale(.97); }
   .scan-label-ko { font-size: 14px; }
   .progress-track { height: 8px; }
   .prog-label, .prog-pct { font-size: 14px; }
-  .ppe-status  { padding: 14px 18px; border-radius: 14px; }
-  .status-icon { font-size: 24px; }
-  .status-name { font-size: 16px; }
-  .status-ko   { font-size: 13px; }
-  .status-tag  { font-size: 13px; padding: 4px 14px; }
-  .result-card  { padding: 20px 24px; border-radius: 20px; }
-  .result-emoji { font-size: 52px; margin-bottom: 6px; }
-  .result-title { font-size: 42px; letter-spacing: 4px; margin-bottom: 10px; }
-  .result-ppe-info { font-size: 14px; margin-bottom: 6px; }
-  .tts-box   { padding: 12px 14px; border-radius: 12px; margin: 10px 0; }
+  .ppe-status  { padding: min(11px, 1.3dvh) 18px; border-radius: 14px; }
+  .status-icon { font-size: 22px; }
+  .status-name { font-size: 15px; }
+  .status-ko   { font-size: 12px; }
+  .status-tag  { font-size: 12px; padding: 3px 14px; }
+  .result-card  { padding: min(16px, 2dvh) 24px; border-radius: 20px; }
+  .result-emoji { font-size: min(44px, 5.5dvh); margin-bottom: min(6px, 0.7dvh); }
+  .result-title { font-size: min(38px, 4.8dvh); letter-spacing: 4px; margin-bottom: min(8px, 1dvh); }
+  .result-ppe-info { font-size: 14px; margin-bottom: min(5px, 0.6dvh); }
+  .tts-box   { padding: min(10px, 1.2dvh) 14px; border-radius: 12px; margin: min(8px, 1dvh) 0; }
   .tts-msg   { font-size: 15px; }
   .tts-msg-ko { font-size: 13px; }
-  .guide-box  { padding: 10px 14px; margin: 8px 0; }
-  .guide-list li { font-size: 14px; margin-bottom: 4px; }
-  .escalation-text { font-size: 16px; }
-  .escalation-ko   { font-size: 13px; }
-  .auto-reset-bar  { height: 5px; margin: 10px 0 5px; }
+  .guide-box  { padding: min(8px, 1dvh) 14px; margin: min(6px, 0.8dvh) 0; }
+  .guide-list li { font-size: 13px; margin-bottom: min(3px, 0.4dvh); }
+  .escalation-text { font-size: 15px; }
+  .escalation-ko   { font-size: 12px; }
+  .auto-reset-bar  { height: 5px; margin: min(8px, 1dvh) 0 min(4px, 0.5dvh); }
   #footer { padding: 10px; font-size: 12px; }
 }
 
@@ -589,35 +598,37 @@ button:not(:disabled):active { transform: scale(.97); }
   .header-sub   { font-size: 13px; }
   .title-xl         { font-size: 52px; }
   .sub-text         { font-size: 20px; }
-  .bilingual-native { font-size: 30px; }
-  .bilingual-ko     { font-size: 18px; }
+  .bilingual-native { font-size: min(26px, 2.8dvh); }
+  .bilingual-ko     { font-size: min(16px, 1.8dvh); }
   .caption          { font-size: 16px; }
   .lang-grid { gap: 24px; }
   .lang-btn  { padding: 40px 16px; border-radius: 22px; }
-  .lang-flag { font-size: 72px; margin-bottom: 14px; }
+  .lang-flag { width: 88px; margin-bottom: 14px; }
   .lang-label { font-size: 20px; }
-  .flag-xl     { font-size: 72px; margin-bottom: 12px; }
-  .pin-dots    { gap: 28px; margin: 18px 0 14px; }
+  .flag-xl img { width: min(110px, 11dvh); border-radius: 10px; }
+  .flag-xl     { margin-bottom: min(12px, 1dvh); }
+  .pin-dots    { gap: 28px; margin: min(18px, 1.5dvh) 0 min(14px, 1dvh); }
   .pin-dot     { width: 32px; height: 32px; }
-  .pin-masking { font-size: 22px; padding: 12px 24px; margin-bottom: 22px; }
-  .numpad      { max-width: 500px; gap: 14px; }
-  .num-key     { padding: 32px 12px; font-size: 38px; border-radius: 18px; }
+  .pin-masking { font-size: 22px; padding: min(12px, 1dvh) 24px; margin-bottom: min(22px, 1.8dvh); }
+  .numpad      { max-width: 500px; gap: min(14px, 1.2dvh); }
+  .num-key     { padding: min(32px, 2.5dvh) 12px; font-size: 38px; border-radius: 18px; }
   .num-key.del { font-size: 28px; }
-  button     { padding: 22px 28px; font-size: 20px; border-radius: 18px; }
-  .btn-lg    { padding: 28px 32px; font-size: 24px; }
-  .btn-sub   { font-size: 15px; margin-top: 5px; }
-  .btn-ghost { font-size: 18px; }
+  button     { padding: min(16px, 1.6dvh) 28px; font-size: 19px; border-radius: 18px; }
+  .btn-lg    { padding: min(18px, 1.8dvh) 32px; font-size: 22px; }
+  .btn-sub   { font-size: 14px; margin-top: 4px; }
+  .btn-ghost { font-size: 17px; }
+  #btn-start-scan  { padding: min(12px, 1.2dvh) 28px; font-size: 17px; }
   .cam-view        { min-height: 0; height: min(40vh, 420px); border-radius: 22px; }
   .cam-placeholder { min-height: 0; height: 100%; }
   .cam-icon        { font-size: 64px; }
   .cam-label       { font-size: 18px; }
   #cam-video       { height: 100%; border-radius: 22px; }
-  .ppe-card        { padding: 16px 14px; border-radius: 18px; }
-  .ppe-emoji       { font-size: 38px; margin-bottom: 6px; }
-  .ppe-name        { font-size: 18px; }
-  .ppe-name-ko     { font-size: 13px; }
-  .ppe-check       { font-size: 15px; margin-top: 3px; }
-  .ppe-check-ko    { font-size: 12px; }
+  .ppe-card        { padding: min(12px, 1.3dvh) 14px; border-radius: 18px; }
+  .ppe-emoji       { font-size: min(32px, 3dvh); margin-bottom: min(5px, 0.5dvh); }
+  .ppe-name        { font-size: 17px; }
+  .ppe-name-ko     { font-size: 12px; }
+  .ppe-check       { font-size: 14px; margin-top: 2px; }
+  .ppe-check-ko    { font-size: 11px; }
   .pin-badge       { font-size: 17px; padding: 8px 22px; }
   .corner          { width: 28px; height: 28px; }
   .scan-view { height: min(42vh, 440px); border-radius: 22px; }
@@ -629,26 +640,26 @@ button:not(:disabled):active { transform: scale(.97); }
   .scan-label-ko { font-size: 18px; }
   .progress-track { height: 10px; }
   .prog-label, .prog-pct { font-size: 16px; }
-  .progress-wrap { margin-bottom: 20px; }
-  .ppe-status  { padding: 18px 22px; border-radius: 18px; gap: 16px; }
-  .status-icon { font-size: 30px; }
-  .status-name { font-size: 20px; }
-  .status-ko   { font-size: 15px; }
-  .status-tag  { font-size: 15px; padding: 6px 18px; }
-  .result-card  { padding: 60px 48px; border-radius: 28px; }
-  .result-emoji { font-size: 96px; margin-bottom: 18px; }
-  .result-title { font-size: 64px; letter-spacing: 7px; }
-  .result-ppe-info { font-size: 20px; margin-bottom: 14px; }
-  .tts-box   { padding: 20px 24px; border-radius: 18px; margin: 18px 0; }
-  .tts-label { font-size: 14px; letter-spacing: 1.2px; }
-  .tts-msg   { font-size: 22px; }
-  .tts-msg-ko { font-size: 17px; }
-  .guide-title { font-size: 16px; margin-bottom: 12px; }
-  .guide-list li { font-size: 18px; margin-bottom: 10px; }
-  .escalation-box { padding: 22px; margin-top: 20px; }
-  .escalation-text { font-size: 22px; }
-  .escalation-ko   { font-size: 17px; }
-  .auto-reset-bar  { height: 8px; margin: 22px 0 9px; }
-  .result-pin-badge { font-size: 17px; padding: 8px 20px; }
-  #footer { padding: 18px; font-size: 15px; }
+  .progress-wrap { margin-bottom: min(14px, 1.5dvh); }
+  .ppe-status  { padding: min(13px, 1.3dvh) 22px; border-radius: 18px; gap: 14px; }
+  .status-icon { font-size: 26px; }
+  .status-name { font-size: 18px; }
+  .status-ko   { font-size: 13px; }
+  .status-tag  { font-size: 14px; padding: min(5px, 0.5dvh) 18px; }
+  .result-card  { padding: min(24px, 2.5dvh) 48px; border-radius: 28px; }
+  .result-emoji { font-size: min(64px, 7dvh); margin-bottom: min(10px, 1dvh); }
+  .result-title { font-size: min(52px, 5.5dvh); letter-spacing: 6px; margin-bottom: min(10px, 1dvh); }
+  .result-ppe-info { font-size: 17px; margin-bottom: min(8px, 0.9dvh); }
+  .tts-box   { padding: min(14px, 1.5dvh) 24px; border-radius: 18px; margin: min(10px, 1.2dvh) 0; }
+  .tts-label { font-size: 13px; letter-spacing: 1.1px; }
+  .tts-msg   { font-size: 19px; }
+  .tts-msg-ko { font-size: 15px; }
+  .guide-title { font-size: 15px; margin-bottom: min(8px, 0.9dvh); }
+  .guide-list li { font-size: 16px; margin-bottom: min(6px, 0.7dvh); }
+  .escalation-box { padding: min(16px, 1.6dvh) 22px; margin-top: min(12px, 1.3dvh); }
+  .escalation-text { font-size: 19px; }
+  .escalation-ko   { font-size: 14px; }
+  .auto-reset-bar  { height: 7px; margin: min(14px, 1.5dvh) 0 min(6px, 0.7dvh); }
+  .result-pin-badge { font-size: 16px; padding: min(6px, 0.7dvh) 20px; }
+  #footer { padding: min(14px, 1.5dvh); font-size: 14px; }
 }

@@ -76,11 +76,11 @@ function t(key) {
 function initLangScreen() {
   const grid = $("lang-grid");
   grid.innerHTML = "";
-  LANGUAGES.forEach(({ code, flag, label }) => {
+  LANGUAGES.forEach(({ code, cc, label }) => {
     const btn = document.createElement("button");
     btn.className = "lang-btn";
-    btn.innerHTML = `<span class="lang-flag">${flag}</span><span class="lang-label">${label}</span>`;
-    btn.addEventListener("click", () => selectLang(code, flag));
+    btn.innerHTML = `<img class="lang-flag" src="https://flagcdn.com/w80/${cc}.png" alt="${label}"><span class="lang-label">${label}</span>`;
+    btn.addEventListener("click", () => selectLang(code, cc));
     grid.appendChild(btn);
   });
   // 3열 기준으로 마지막 행 빈 칸 채우기
@@ -95,17 +95,17 @@ function initLangScreen() {
   }
 }
 
-function selectLang(code, flag) {
+function selectLang(code, cc) {
   state.lang = code;
   state.pin = "";
   speak((T[code] || T["ko"]).greeting);
-  initPinScreen(flag);
+  initPinScreen(cc);
   showScreen("screen-pin");
 }
 
 /* ── PIN 입력 ────────────────────────────────── */
-function initPinScreen(flag) {
-  $("pin-flag").textContent = flag;
+function initPinScreen(cc) {
+  $("pin-flag").innerHTML = `<img src="https://flagcdn.com/w160/${cc}.png" alt="" style="height:1em;border-radius:4px;">`;
   $("pin-prompt-native").textContent = t("pinPrompt");
   $("pin-prompt-ko").textContent = state.lang !== "ko" ? "전화번호 뒷자리 4자리를 입력하세요" : "";
   buildPinDots();
@@ -236,7 +236,7 @@ function captureFrame() {
 /* ── 카메라 준비 화면 ────────────────────────── */
 function initReadyScreen() {
   const lang = LANGUAGES.find((l) => l.code === state.lang);
-  $("ready-badge").textContent = `${lang?.flag || ""} ●●●-●●●●-${state.pin}`;
+  $("ready-badge").innerHTML = `<img src="https://flagcdn.com/w40/${lang?.cc || "kr"}.png" alt="" style="height:1em;border-radius:3px;vertical-align:middle;margin-right:4px;"> ●●●-●●●●-${state.pin}`;
   $("ready-greeting-native").textContent = t("greeting");
   $("ready-greeting-ko").textContent = state.lang !== "ko" ? "안녕하세요!" : "";
 
@@ -383,7 +383,7 @@ function showResult({ helmetOk, vestOk }) {
   const passed = helmetOk && vestOk;
   flash();
   if (passed) {
-    showPassScreen({ helmetOk, vestOk });
+    showPassScreen();
   } else {
     state.failCount++;
     showFailScreen({ helmetOk, vestOk });
@@ -391,9 +391,9 @@ function showResult({ helmetOk, vestOk }) {
 }
 
 /* ── PASS 화면 ───────────────────────────────── */
-function showPassScreen({ helmetOk, vestOk }) {
+function showPassScreen() {
   const lang = LANGUAGES.find((l) => l.code === state.lang);
-  $("pass-pin-badge").textContent = `${lang?.flag || ""} ●●●-●●●●-${state.pin}`;
+  $("pass-pin-badge").innerHTML = `<img src="https://flagcdn.com/w40/${lang?.cc || "kr"}.png" alt="" style="height:1em;border-radius:3px;vertical-align:middle;margin-right:4px;"> ●●●-●●●●-${state.pin}`;
   $("pass-ppe-info").textContent  = `${t("helmetName")} ✅  ${t("vestName")} ✅`;
   $("pass-tts-label").textContent  = "🔊 TTS";
   $("pass-msg-native").textContent = t("passMsg");
@@ -437,7 +437,7 @@ function clearAutoReset() {
 /* ── FAIL 화면 ───────────────────────────────── */
 function showFailScreen({ helmetOk, vestOk }) {
   const lang = LANGUAGES.find((l) => l.code === state.lang);
-  $("fail-pin-badge").textContent = `${lang?.flag || ""} ●●●-●●●●-${state.pin}`;
+  $("fail-pin-badge").innerHTML = `<img src="https://flagcdn.com/w40/${lang?.cc || "kr"}.png" alt="" style="height:1em;border-radius:3px;vertical-align:middle;margin-right:4px;"> ●●●-●●●●-${state.pin}`;
   $("fail-tts-label").textContent  = "🔊 TTS";
   $("fail-msg-native").textContent = t("failMsg");
   $("fail-msg-ko").textContent     = state.lang !== "ko" ? T["ko"].failMsg : "";
