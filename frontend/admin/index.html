@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Safe Guardian — 산업 현장 안전 시스템</title>
+ 
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+ 
+  <link rel="stylesheet" href="style.css" />
+</head>
+ 
+<body>
+  <aside class="sidebar flex flex-col p-4">
+    <div class="flex items-center gap-3 px-2 py-6 border-b border-white/10 mb-6">
+      <div class="w-11 h-11 bg-[#F47C20] rounded-xl flex items-center justify-center shadow-lg">
+        <i class="fas fa-shield-halved text-white text-xl"></i>
+      </div>
+      <div>
+        <h1 class="text-white font-bold text-base leading-tight">AI Safe Guardian</h1>
+        <p class="text-white/40 text-[10px]">산업 현장 안전 시스템</p>
+      </div>
+    </div>
+ 
+    <nav class="flex-1 flex flex-col gap-1">
+      <div class="text-white/30 text-[9px] font-bold tracking-widest px-3 mb-2">메인 메뉴</div>
+      <button onclick="navigate('dashboard')" id="nav-dashboard" class="nav-item active">
+        <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
+        <span class="flex-1 text-left font-medium">실시간 대시보드</span>
+      </button>
+      <button onclick="navigate('checkin')" id="nav-checkin" class="nav-item">
+        <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+        <span class="flex-1 text-left font-medium">체크인 기록</span>
+      </button>
+ 
+      <div class="text-white/30 text-[9px] font-bold tracking-widest px-3 mt-6 mb-2">데이터 분석</div>
+      <button onclick="navigate('daily')" id="nav-daily" class="nav-item">
+        <span class="nav-icon"><i class="fas fa-calendar-day"></i></span>
+        <span class="flex-1 text-left font-medium">일별 데이터</span>
+      </button>
+      <button onclick="navigate('monthly')" id="nav-monthly" class="nav-item">
+        <span class="nav-icon"><i class="fas fa-calendar-alt"></i></span>
+        <span class="flex-1 text-left font-medium">월별 데이터</span>
+      </button>
+ 
+      <div class="text-white/30 text-[9px] font-bold tracking-widest px-3 mt-6 mb-2">시스템</div>
+      <button onclick="navigate('alarm')" id="nav-alarm" class="nav-item group relative">
+        <span class="nav-icon"><i class="fas fa-bell"></i></span>
+        <span class="flex-1 text-left font-medium">알림</span>
+        <span id="fail-badge" class="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] flex items-center justify-center shadow-sm">
+          3
+        </span>
+      </button>
+    </nav>
+ 
+    <div class="mt-auto bg-white/10 border border-white/10 rounded-xl p-3 flex items-center gap-3">
+      <div class="w-9 h-9 bg-[#F47C20] rounded-lg flex items-center justify-center text-white font-bold">관</div>
+      <div class="flex-1 overflow-hidden">
+        <p class="text-white text-xs font-bold truncate">관리자</p>
+        <p class="text-white/40 text-[10px]">슈퍼 관리자</p>
+      </div>
+      <i class="fas fa-right-from-bracket text-white/30 text-xs cursor-pointer"></i>
+    </div>
+  </aside>
+ 
+  <div class="flex-1 flex flex-col min-width-0">
+    <header class="bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center shadow-sm z-10">
+      <div>
+        <h2 id="page-title" class="text-lg font-bold text-gray-800">실시간 대시보드</h2>
+        <p id="page-subtitle" class="text-[11px] text-gray-400">실시간 안전 모니터링 — 30초마다 자동 갱신</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-xl border border-green-100">
+          <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          <span class="text-green-600 text-[11px] font-bold">실시간 연결됨</span>
+        </div>
+        <div class="flex items-center gap-3 bg-gray-50 border border-gray-200 px-4 py-1.5 rounded-xl text-xs font-bold text-gray-700">
+          <i class="far fa-calendar text-gray-400"></i>
+          <span id="clock">13:04:38</span>
+        </div>
+      </div>
+    </header>
+ 
+    <main class="flex-1 overflow-y-auto p-6">
+      <!-- ══════════════════ 대시보드 섹션 ══════════════════ -->
+      <section id="section-dashboard" class="section active">
+        <div class="grid grid-cols-4 gap-4">
+          <div class="card kpi-card p-5">
+            <div class="flex justify-between mb-4">
+              <div><p class="text-[11px] text-gray-500 font-medium">안전 확인율</p><h3 id="kpi-safety-rate" class="text-2xl font-black text-gray-800">--%</h3></div>
+              <div class="w-11 h-11 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg"><i class="fas fa-chart-line"></i></div>
+            </div>
+            <p id="kpi-safety-trend" class="text-[10px] text-green-600 font-bold mb-2">↑ 어제 대비 --</p>
+            <div class="h-1 bg-gray-100 rounded-full overflow-hidden"><div id="kpi-safety-bar" class="h-full bg-blue-600 rounded-full" style="width: 0%"></div></div>
+          </div>
+          <div class="card kpi-card p-5">
+            <div class="flex justify-between mb-4">
+              <div><p class="text-[11px] text-gray-500 font-medium">총 통과 건수</p><h3 id="kpi-total-pass" class="text-2xl font-black text-gray-800">--</h3></div>
+              <div class="w-11 h-11 bg-green-50 text-green-600 rounded-xl flex items-center justify-center text-lg"><i class="fas fa-circle-check"></i></div>
+            </div>
+            <p id="kpi-pass-trend" class="text-[10px] text-green-600 font-bold mb-2">↑ 지난 1시간 --건</p>
+            <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div id="kpi-pass-bar" class="h-full bg-green-500 rounded-full" style="width: 0%"></div>
+          </div>
+        </div>
+          <div class="card kpi-card p-5">
+            <div class="flex justify-between mb-4">
+              <div><p class="text-[11px] text-gray-500 font-medium">실패 건수</p><h3 id="kpi-total-fail" class="text-2xl font-black text-red-600">--</h3></div>
+              <div class="w-11 h-11 bg-red-50 text-red-600 rounded-xl flex items-center justify-center text-lg"><i class="fas fa-circle-xmark"></i></div>
+            </div>
+            
+            <p id="kpi-fail-trend" class="text-[10px] text-red-500 font-bold mb-2">↗ 지난 1시간 --건</p>
+            <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
+              <div id="kpi-fail-bar" class="h-full bg-red-600 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="card kpi-card p-5">
+            <div class="flex justify-between mb-4">
+              <div><p class="text-[11px] text-gray-500 font-medium">검토 대기</p><h3 id="kpi-pending" class="text-2xl font-black text-gray-800">--</h3></div>
+              <div class="w-11 h-11 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center text-lg"><i class="fas fa-clock"></i></div>
+            </div>
+            <p id="kpi-pending-trend" class="text-[10px] text-orange-500 font-bold mb-2">↗ 긴급 --건</p>
+            <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
+              <div id="kpi-pending-bar" class="h-full bg-orange-500 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+
+
+          </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-[310px_1fr_310px] gap-[18px] items-stretch">
+          <div class="card" style="padding:20px; display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+              <div>
+                <div style="font-size:15px; font-weight:700; color:#111827;">언어별 분포</div>
+                <div style="font-size:11px; color:#9CA3AF; margin-top:2px;">국적별 작업자 현황</div>
+              </div>
+              <div style="background:#EBF2FF; color:#1A56A0; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:600;">오늘</div>
+            </div>
+            <div style="position:relative; height:190px; display:flex; align-items:center; justify-content:center;">
+              <canvas id="donutChart"></canvas>
+              <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none;">
+                <div style="font-size:19px; font-weight:700; color:#111827; line-height:1;">100%</div>
+                <div style="font-size:9px; color:#9CA3AF; margin-top:2px;">전체 현황</div>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#F47C20;"></div>
+                  <span style="font-size:12px; color:#374151;">🇻🇳 베트남어</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:60px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:24%; height:100%; background:#F47C20;"></div></div>
+                  <span style="font-size:12px; font-weight:600; color:#111827; min-width:28px; text-align:right;">24%</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#DC2626;"></div>
+                  <span style="font-size:12px; color:#374151;">🇨🇳 중국어</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:60px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:26%; height:100%; background:#DC2626;"></div></div>
+                  <span style="font-size:12px; font-weight:600; color:#111827; min-width:28px; text-align:right;">26%</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#CA8A04;"></div>
+                  <span style="font-size:12px; color:#374151;">🇰🇭 크메르어</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:60px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:25%; height:100%; background:#CA8A04;"></div></div>
+                  <span style="font-size:12px; font-weight:600; color:#111827; min-width:28px; text-align:right;">25%</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#7C3AED;"></div>
+                  <span style="font-size:12px; color:#374151;">🇹🇭 태국어</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:60px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:20%; height:100%; background:#7C3AED;"></div></div>
+                  <span style="font-size:12px; font-weight:600; color:#111827; min-width:28px; text-align:right;">20%</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#1A56A0;"></div>
+                  <span style="font-size:12px; color:#374151;">🇰🇷 한국어</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:60px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:4%; height:100%; background:#1A56A0;"></div></div>
+                  <span style="font-size:12px; font-weight:600; color:#111827; min-width:28px; text-align:right;">4%</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#64748B;"></div>
+                  <span style="font-size:12px; color:#374151;">🌐 기타</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:60px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:1%; height:100%; background:#64748B;"></div></div>
+                  <span style="font-size:12px; font-weight:600; color:#111827; min-width:28px; text-align:right;">1%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+ 
+          <!-- ═══ 시간대별 체크인 현황 및 PASS/FAIL 비율 ═══ -->
+          <div class="card p-5 flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="text-sm font-bold text-gray-800">시간대별 체크인 현황 및 PASS/FAIL 비율</h4>
+                <p class="text-[10px] text-gray-400 mt-0.5">시간대별 통과·실패 추이를 확인하세요</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="switchChartView('all')" id="chart-btn-all" class="toggle-btn pass-active" style="background:#EBF2FF; color:#1A56A0; border-color:#1A56A0;">전체</button>
+                <button onclick="switchChartView('pass')" id="chart-btn-pass" class="toggle-btn inactive">PASS</button>
+                <button onclick="switchChartView('fail')" id="chart-btn-fail" class="toggle-btn inactive">FAIL</button>
+              </div>
+            </div>
+            <div class="flex-1" style="position:relative; min-height:220px;">
+              <canvas id="timeBarChart"></canvas>
+            </div>
+            <div class="mt-4 bg-gray-50 rounded-xl p-3 flex justify-between text-[11px] font-bold">
+              <span class="text-gray-500">오늘 합계: <span id="total-summary-count" class="text-gray-800">--건</span></span>
+              <span id="total-summary-rate" class="text-blue-700">--% PASS</span>
+            </div>
+          </div>
+
+          <!-- ═══ 언어별 FAIL 비율 (신규 추가) ═══ -->
+          <div class="card p-5 flex flex-col">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+              <div>
+                <h4 class="text-sm font-bold text-red-600">언어별 FAIL 비율</h4>
+                <div style="font-size:11px; color:#9CA3AF; margin-top:2px;">국적별 실패 분포 현황</div>
+              </div>
+              <div style="background:#FEF2F2; color:#DC2626; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:600;">총 112건</div>
+            </div>
+            <div style="position:relative; height:200px; display:flex; align-items:center; justify-content:center;">
+              <canvas id="failDonutChart"></canvas>
+              <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none;">
+                <div style="font-size:16px; font-weight:700; color:#DC2626; line-height:1;">FAIL</div>
+                <div style="font-size:9px; color:#9CA3AF; margin-top:2px;">112건</div>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:7px; margin-top:10px;">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#F47C20;"></div>
+                  <span style="font-size:11px; color:#374151;">🇻🇳 베트남</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:50px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:29%; height:100%; background:#F47C20;"></div></div>
+                  <span style="font-size:11px; font-weight:700; color:#111827; min-width:40px; text-align:right;">29% <span style="font-size:9px; color:#9CA3AF; font-weight:500;">32건</span></span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#DC2626;"></div>
+                  <span style="font-size:11px; color:#374151;">🇨🇳 중국</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:50px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:25%; height:100%; background:#DC2626;"></div></div>
+                  <span style="font-size:11px; font-weight:700; color:#111827; min-width:40px; text-align:right;">25% <span style="font-size:9px; color:#9CA3AF; font-weight:500;">28건</span></span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#CA8A04;"></div>
+                  <span style="font-size:11px; color:#374151;">🇰🇭 캄보디아</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:50px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:20%; height:100%; background:#CA8A04;"></div></div>
+                  <span style="font-size:11px; font-weight:700; color:#111827; min-width:40px; text-align:right;">20% <span style="font-size:9px; color:#9CA3AF; font-weight:500;">22건</span></span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#7C3AED;"></div>
+                  <span style="font-size:11px; color:#374151;">🇹🇭 태국</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:50px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:16%; height:100%; background:#7C3AED;"></div></div>
+                  <span style="font-size:11px; font-weight:700; color:#111827; min-width:40px; text-align:right;">16% <span style="font-size:9px; color:#9CA3AF; font-weight:500;">18건</span></span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#1A56A0;"></div>
+                  <span style="font-size:11px; color:#374151;">🇰🇷 한국</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:50px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:7%; height:100%; background:#1A56A0;"></div></div>
+                  <span style="font-size:11px; font-weight:700; color:#111827; min-width:40px; text-align:right;">7% <span style="font-size:9px; color:#9CA3AF; font-weight:500;">8건</span></span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#64748B;"></div>
+                  <span style="font-size:11px; color:#374151;">🌐 기타</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:50px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:3%; height:100%; background:#64748B;"></div></div>
+                  <span style="font-size:11px; font-weight:700; color:#111827; min-width:40px; text-align:right;">3% <span style="font-size:9px; color:#9CA3AF; font-weight:500;">4건</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+ 
+        <!-- ═══ 국적별 체크인 인원 현황 (신규) ═══ -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h4 class="text-sm font-bold text-gray-800">국적별 체크인 인원 현황</h4>
+              <p class="text-[10px] text-gray-400 mt-0.5">오늘 체크인한 작업자 수를 국적별로 표시합니다</p>
+            </div>
+            <div style="background:#EBF2FF; color:#1A56A0; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:600;">오늘 기준</div>
+          </div>
+          <div class="grid grid-cols-6 gap-3" id="nation-stats-container">
+            <!-- JS로 채워짐 -->
+          </div>
+        </div>
+      </section>
+ 
+      <!-- ══════════════════ 체크인 기록 섹션 ══════════════════ -->
+      <section id="section-checkin" class="section">
+        <div class="card overflow-hidden">
+          <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white">
+            <div>
+              <h4 class="text-sm font-bold text-gray-800">전체 체크인 기록</h4>
+              <p class="text-[10px] text-gray-400 mt-0.5">작업자 체크인 이력 조회 (한 페이지 8명)</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="bg-gray-100 p-1 rounded-xl flex gap-1">
+                <button onclick="setFilter('ALL')" id="filter-ALL-hist" class="filter-btn active">전체</button>
+                <button onclick="setFilter('PASS')" id="filter-PASS-hist" class="filter-btn">통과</button>
+                <button onclick="setFilter('FAIL')" id="filter-FAIL-hist" class="filter-btn">실패</button>
+              </div>
+              <button class="bg-blue-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors">
+                <i class="fas fa-download mr-1.5"></i> 내보내기 (CSV)
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-gray-50 text-gray-400 font-bold uppercase tracking-wider">
+                <tr>
+                  <th class="px-6 py-4">체크인 ID</th>
+                  <th class="px-6 py-4">작업자 국적 및 언어</th>
+                  <th class="px-6 py-4">일시</th>
+                  <th class="px-6 py-4">최종 상태</th>
+                </tr>
+              </thead>
+              <tbody id="checkin-table-body" class="divide-y divide-gray-50"></tbody>
+            </table>
+          </div>
+          <div class="p-4 border-t border-gray-50 flex justify-between items-center bg-gray-50/30">
+            <span id="pagination-info" class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter"></span>
+            <div id="pagination-btns" class="flex gap-1"></div>
+          </div>
+        </div>
+      </section>
+ 
+      <!-- ══════════════════ 일별 데이터 섹션 (신규) ══════════════════ -->
+      <section id="section-daily" class="section">
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h4 class="text-lg font-bold text-gray-800" id="daily-title">2026년 3월 일별 데이터</h4>
+              <p class="text-[11px] text-gray-400 mt-0.5">일별 체크인 현황 및 PASS/FAIL 추이</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="changeDailyMonth(-1)" id="daily-prev-btn" class="daily-nav-btn"><i class="fas fa-chevron-left mr-2"></i>이전 달</button>
+              <button onclick="changeDailyMonth(1)" id="daily-next-btn" class="daily-nav-btn" disabled>다음 달 <i class="fas fa-chevron-right ml-2"></i></button>
+            </div>
+          </div>
+          <!-- KPI 요약 -->
+          <div class="grid grid-cols-4 gap-4 mb-6" id="daily-kpi-row">
+          </div>
+          <!-- 일별 바 차트 -->
+          <div style="height:300px; position:relative;" class="mb-6">
+            <canvas id="dailyBarChart"></canvas>
+          </div>
+          <!-- 일별 국적별 테이블 -->
+          <div>
+            <h5 class="text-sm font-bold text-gray-700 mb-3">국적별 일별 체크인 수</h5>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs" id="daily-nation-table">
+                <thead class="bg-gray-50 text-gray-400 font-bold uppercase tracking-wider">
+                  <tr id="daily-nation-thead"></tr>
+                </thead>
+                <tbody id="daily-nation-tbody" class="divide-y divide-gray-50"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+ 
+      <!-- ══════════════════ 월별 데이터 섹션 (신규) ══════════════════ -->
+      <section id="section-monthly" class="section">
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h4 class="text-lg font-bold text-gray-800">2026년 월별 데이터</h4>
+              <p class="text-[11px] text-gray-400 mt-0.5">월을 선택하여 해당 월의 종합 데이터를 확인하세요</p>
+            </div>
+            <div style="background:#EBF2FF; color:#1A56A0; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:700;">2026년</div>
+          </div>
+          <!-- 월 선택 그리드 -->
+          <div class="grid grid-cols-6 gap-3 mb-6" id="month-selector">
+          </div>
+          <!-- 월별 데이터 표시 영역 -->
+          <div id="monthly-data-area">
+            <div class="text-center py-10 text-gray-400">
+              <i class="fas fa-hand-pointer text-4xl mb-3 text-gray-300"></i>
+              <p class="text-sm font-bold">위에서 월을 선택해주세요</p>
+            </div>
+          </div>
+        </div>
+      </section>
+ 
+      <!-- ══════════════════ 알림 섹션 ══════════════════ -->
+      <section id="section-alarm" class="section">
+        <div class="card p-10 text-center">
+          <i class="fas fa-bell text-gray-200 text-6xl mb-4"></i>
+          <h4 class="text-lg font-bold text-gray-800">새로운 알림이 있습니다</h4>
+          <p class="text-gray-400 text-sm">현재 3건의 FAIL 로그가 감지되었습니다.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+ 
+  <script src="script.js"></script>
+</body>
+</html>

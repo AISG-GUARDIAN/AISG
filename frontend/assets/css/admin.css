@@ -1,0 +1,5 @@
+nav { background: #1976d2; color: #fff; padding: 0.75rem 1.5rem; display: flex; gap: 1rem; }
+nav a { color: #fff; text-decoration: none; }
+main { padding: 1.5rem; }
+table { width: 100%; border-collapse: collapse; background: #fff; }
+th, td { padding: 0.75rem; border-bottom: 1px solid #eee; text-align: left; }
