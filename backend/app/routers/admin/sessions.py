@@ -64,7 +64,6 @@ def list_sessions(
         override = s.override
         result.append(SessionResponse(
             id=s.id, user_id=s.user_id,
-            user_name=user.name if user else "",
             group_name=group_map.get(user.group_id, "") if user else "",
             date=s.date, attempt_count=s.attempt_count,
             helmet_pass=s.helmet_pass, vest_pass=s.vest_pass,
@@ -107,7 +106,6 @@ def override_session(
             session_id=session.id,
             admin_id=admin.id,
             admin_emp_no=admin.emp_no,
-            admin_name=admin.name,
             reason=body.reason,
         )
         db.add(override)
@@ -118,12 +116,12 @@ def override_session(
     # 감사 로그
     audit = AuditLog(
         admin_id=admin.id,
-        admin_name=admin.name,
+        admin_emp_no=admin.emp_no,
         action="override_pass",
         target_type="check_session",
         target_id=session.id,
         detail=json.dumps({
-            "user_name": user.name, "reason": body.reason,
+            "user_id": user.id, "reason": body.reason,
         }, ensure_ascii=False),
     )
     db.add(audit)
@@ -132,7 +130,7 @@ def override_session(
 
     return SessionResponse(
         id=session.id, user_id=session.user_id,
-        user_name=user.name, group_name=group.name,
+        group_name=group.name,
         date=session.date, attempt_count=session.attempt_count,
         helmet_pass=session.helmet_pass, vest_pass=session.vest_pass,
         cv_confidence=session.cv_confidence, image_url=session.image_url,

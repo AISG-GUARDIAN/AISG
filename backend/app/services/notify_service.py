@@ -37,16 +37,19 @@ def check_and_notify(db: Session, user: User, attempt_count: int, session_id: in
 
     # 감사 로그에 관리자 호출 이벤트를 기록한다
     # admin_id=1은 시스템 기본 관리자를 가리킴
+    # admin_emp_no: 시스템 기본 관리자의 사원번호를 조회
+    from app.models.admin import Admin
+    system_admin = db.query(Admin).filter(Admin.id == 1).first()
     audit = AuditLog(
         admin_id=1,
-        admin_name="SYSTEM",
+        admin_emp_no=system_admin.emp_no if system_admin else "SYSTEM",
         action="admin_call",
         target_type="check_session",
         target_id=session_id,
         detail=json.dumps(
             {
                 "user_id": user.id,
-                "user_name": user.name,
+                "system_id": user.system_id,
                 "group_id": user.group_id,
                 "attempt_count": attempt_count,
             },
@@ -57,6 +60,6 @@ def check_and_notify(db: Session, user: User, attempt_count: int, session_id: in
     db.commit()
 
     logger.info(
-        f"관리자 호출: 작업자 {user.name}(ID:{user.id}) — {attempt_count}회 시도 모두 실패"
+        f"관리자 호출: 작업자 {user.system_id}(ID:{user.id}) — {attempt_count}회 시도 모두 실패"
     )
     return True

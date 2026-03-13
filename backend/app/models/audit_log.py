@@ -18,7 +18,7 @@ class AuditLog(Base):
     Attributes:
         id: 기본키
         admin_id: 수행 관리자 FK
-        admin_name: 수행 관리자 이름 FK
+        admin_emp_no: 수행 관리자 사원번호 FK
         action: 수행 행위 (override_pass, user_create, group_create 등)
         target_type: 대상 유형 (check_session, user, group 등)
         target_id: 대상 레코드 ID
@@ -43,4 +43,4 @@ class AuditLog(Base):
         default=lambda: datetime.now(timezone.utc)
     )
 
-    admin = relationship("Admin")
+    admin = relationship("Admin", foreign_keys=[admin_id])

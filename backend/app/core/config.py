@@ -25,7 +25,6 @@ class Settings(BaseSettings):
         AZURE_OPENAI_DEPLOYMENT: Azure OpenAI 배포 모델명
         DATABASE_URL: SQLite 데이터베이스 경로
         DEFAULT_EMP_NO: 초기 관리자 사원번호
-        DEFAULT_ADMIN_NAME: 초기 관리자 이름
     """
 
     # JWT 설정
@@ -51,7 +50,6 @@ class Settings(BaseSettings):
 
     # 초기 관리자 계정 — 사원번호만으로 로그인
     DEFAULT_EMP_NO: str = "20260312"
-    DEFAULT_ADMIN_NAME: str = "가디언"
 
     model_config = SettingsConfigDict(
         env_file=".env",

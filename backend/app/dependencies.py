@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.security import decode_access_token
 from app.database import get_db
 from app.models.admin import Admin
+from app.models.employee import Employee
 from app.models.user import User
 
 # Bearer 토큰 스킴 — Authorization 헤더에서 JWT를 추출한다
@@ -83,3 +84,27 @@ def get_current_user(
             detail="작업자를 찾을 수 없습니다",
         )
     return user
+
+
+def get_current_employee(
+    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    db: Session = Depends(get_db),
+) -> Employee:
+    """
+    JWT에서 정규직 정보를 추출하여 Employee 객체를 반환한다.
+    토큰이 유효하지 않거나 role이 employee가 아니면 401 에러를 발생시킨다.
+    """
+    payload = decode_access_token(credentials.credentials)
+    if payload is None or payload.get("role") != "employee":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="정규직 인증이 필요합니다",
+        )
+
+    employee = db.query(Employee).filter(Employee.id == int(payload["sub"])).first()
+    if employee is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="정규직 사원을 찾을 수 없습니다",
+        )
+    return employee
