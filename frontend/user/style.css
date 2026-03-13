@@ -1,29 +1,36 @@
 /* ──────────────────────────────────────────────────
    style.css  — AI SAFE GUARDIAN · Worker Check-In
-   라이트 테마 / 어드민 대시보드 무드앤톤 적용
+   어드민 대시보드 무드앤톤 통일
+   Primary: #1A56A0 / Dark: #1A3A6E / Accent: #F47C20
 ────────────────────────────────────────────────── */
 
 /* ── 리셋 & 토큰 ──────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* 배경 */
-  --bg:    #F3F6FB;
+  /* 배경 — 어드민 동일 */
+  --bg:    #F0F4FA;
   --bg2:   #FFFFFF;
-  --bg3:   #EEF2F8;
-  --border: #E2E8F0;
+  --bg3:   #EBF0F8;
+  --border:     rgba(26, 86, 160, 0.12);
+  --border-card: rgba(26, 86, 160, 0.07);
 
   /* 텍스트 */
   --text:  #1E293B;
   --text2: #64748B;
 
-  /* 프라이머리 블루 (어드민과 동일) */
-  --blue:       #1565C0;
-  --blue-dark:  #0D47A1;
-  --blue-light: #E3F2FD;
-  --blue-mid:   #1976D2;
+  /* 프라이머리 — 어드민 사이드바 색상 */
+  --blue:       #1A56A0;
+  --blue-dark:  #1A3A6E;
+  --blue-light: #EBF3FF;
+  --blue-mid:   #2468B8;
 
-  /* 상태 색상 */
+  /* 오렌지 액센트 — 어드민 active nav 색상 */
+  --accent:        #F47C20;
+  --accent-light:  rgba(244, 124, 32, 0.12);
+  --accent-border: rgba(244, 124, 32, 0.35);
+
+  /* 상태 */
   --green:      #10B981;
   --green-dark: #059669;
   --green-bg:   #ECFDF5;
@@ -31,19 +38,14 @@
   --red:        #EF4444;
   --red-bg:     #FEF2F2;
   --red-text:   #991B1B;
-  --orange:     #F97316;
+  --orange:     #F47C20;
 
-  /* 핀 액센트 */
-  --yellow:    #F59E0B;
-  --yellow-bg: rgba(245,158,11,.12);
-  --yellow-bd: rgba(245,158,11,.35);
+  /* 그림자 — 어드민 카드 동일 */
+  --shadow-sm: 0 2px 12px rgba(26, 86, 160, 0.08);
+  --shadow:    0 4px 18px rgba(26, 86, 160, 0.10);
+  --shadow-lg: 0 8px 28px rgba(26, 86, 160, 0.13);
 
-  /* 그림자 */
-  --shadow-sm: 0 1px 3px rgba(30,41,59,.08), 0 1px 2px rgba(30,41,59,.05);
-  --shadow:    0 4px 12px rgba(30,41,59,.08), 0 2px 4px rgba(30,41,59,.05);
-  --shadow-lg: 0 10px 28px rgba(30,41,59,.10), 0 4px 10px rgba(30,41,59,.06);
-
-  --radius: 14px;
+  --radius: 16px;
   --r-sm:   10px;
 }
 
@@ -72,11 +74,11 @@ html, body {
   max-width: 520px; margin: 0 auto;
 }
 
-/* ── 헤더 ────────────────────────────────────── */
+/* ── 헤더 — 어드민 사이드바 그라데이션 동일 ── */
 #header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 20px;
-  background: var(--blue-dark);
+  background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%);
   position: sticky; top: 0; z-index: 100;
 }
 .header-logo  { display: flex; align-items: center; gap: 10px; }
@@ -84,36 +86,25 @@ html, body {
 .header-title { font-size: 14px; font-weight: 700; letter-spacing: .8px; color: #FFFFFF; }
 .header-sub   { font-size: 10px; color: rgba(255,255,255,.6); margin-top: 2px; }
 .btn-ghost {
-  background: rgba(255,255,255,.15);
-  border: 1.5px solid rgba(255,255,255,.25);
-  color: #fff; font-size: 13px;
-  border-radius: var(--r-sm);
-  padding: 7px 14px; cursor: pointer;
+  background: rgba(255,255,255,.12);
+  border: 1.5px solid rgba(255,255,255,.22);
+  color: #fff; font-size: 13px; font-weight: 600;
+  border-radius: 8px; padding: 7px 14px; cursor: pointer;
   transition: background .15s;
 }
-.btn-ghost:hover { background: rgba(255,255,255,.25); }
+.btn-ghost:hover { background: rgba(255,255,255,.22); }
 
-/* 언어선택 화면 헤더는 라이트 */
+/* 언어선택 화면 헤더 */
 body.screen-lang #header {
-  background: #fff;
-  border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%);
 }
-body.screen-lang #header .header-title { color: var(--blue-dark); }
-body.screen-lang #header .header-sub   { color: var(--text2); }
-body.screen-lang .btn-ghost {
-  background: transparent;
-  border-color: var(--border);
-  color: var(--text2);
-}
+body.screen-lang #footer { background: var(--bg2); border-color: var(--border-card); color: var(--text2); }
 
 /* ── 메인 ────────────────────────────────────── */
 #main { flex: 1; padding: 24px 18px 44px; overflow-y: auto; }
 
-/* 언어선택 화면 */
-body.screen-lang          { background: #F3F6FB; }
-body.screen-lang #main    { background: #F3F6FB; }
-body.screen-lang #footer  { background: #fff; border-color: var(--border); color: var(--text2); }
+body.screen-lang       { background: var(--bg); }
+body.screen-lang #main { background: var(--bg); }
 
 /* ── 화면 전환 ───────────────────────────────── */
 .screen { display: none; }
@@ -122,23 +113,12 @@ body.screen-lang #footer  { background: #fff; border-color: var(--border); color
 .scale-in { animation: scaleIn .28s ease; }
 @keyframes fadeIn  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
 @keyframes scaleIn { from { opacity:0; transform:scale(.93); }       to { opacity:1; transform:none; } }
-
 @keyframes shake {
   0%,100% { transform:translateX(0); }
   20%,60% { transform:translateX(-6px); }
   40%,80% { transform:translateX(6px); }
 }
 .shake { animation: shake .4s ease; }
-
-/* ── 카드 래퍼 (공통) ────────────────────────── */
-.card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  padding: 20px;
-  margin-bottom: 14px;
-}
 
 /* ── 타이포 ──────────────────────────────────── */
 .title-xl         { font-size: 28px; font-weight: 800; letter-spacing: 1.5px; text-align: center; margin-bottom: 6px; color: var(--text); }
@@ -154,8 +134,8 @@ body.screen-lang #footer  { background: #fff; border-color: var(--border); color
   gap: 12px;
 }
 .lang-btn {
-  background: #fff;
-  border: 1.5px solid var(--border);
+  background: var(--bg2);
+  border: 1px solid var(--border-card);
   border-radius: var(--radius);
   padding: 22px 8px;
   text-align: center;
@@ -164,14 +144,22 @@ body.screen-lang #footer  { background: #fff; border-color: var(--border); color
   transition: border-color .2s, background .2s, transform .18s, box-shadow .2s;
 }
 .lang-btn:hover {
-  border-color: var(--blue);
-  background: var(--blue-light);
+  border-color: var(--accent-border);
+  background: var(--accent-light);
   box-shadow: var(--shadow);
   transform: translateY(-4px);
 }
 .lang-btn:active { transform: translateY(-2px); }
 .lang-flag  { font-size: 32px; display: block; margin-bottom: 8px; }
 .lang-label { font-size: 13px; font-weight: 600; color: var(--text); }
+
+/* 빈 칸 스페이서 */
+.lang-btn-spacer {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  pointer-events: none;
+}
 
 /* ── ② PIN 입력 ──────────────────────────────── */
 .flag-xl { font-size: 50px; text-align: center; margin-bottom: 14px; }
@@ -183,21 +171,22 @@ body.screen-lang #footer  { background: #fff; border-color: var(--border); color
   transition: background .15s, border-color .15s, box-shadow .15s, transform .15s;
 }
 .pin-dot.filled {
-  background: var(--blue);
-  border-color: var(--blue);
-  box-shadow: 0 0 12px rgba(21,101,192,.45);
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(244, 124, 32, 0.5);
   transform: scale(1.15);
 }
 
 .pin-masking {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   font-size: 17px;
-  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
-  padding: 11px 18px; margin-bottom: 22px;
+  background: var(--bg2); border: 1px solid var(--border-card);
+  border-radius: 10px; padding: 11px 18px; margin-bottom: 22px;
+  box-shadow: var(--shadow-sm);
 }
 .masking-label { color: var(--text2); font-size: 12px; }
 .masking-dots  { letter-spacing: 2px; color: var(--text2); }
-.masking-input { color: var(--blue); font-weight: 700; letter-spacing: 6px; }
+.masking-input { color: var(--accent); font-weight: 700; letter-spacing: 6px; }
 
 /* 숫자패드 */
 .numpad {
@@ -205,7 +194,7 @@ body.screen-lang #footer  { background: #fff; border-color: var(--border); color
   gap: 10px; max-width: 300px; margin: 0 auto;
 }
 .num-key {
-  background: #fff; border: 1.5px solid var(--border);
+  background: var(--bg2); border: 1px solid var(--border-card);
   border-radius: var(--r-sm); padding: 16px 8px;
   font-size: 22px; font-weight: 600; color: var(--text);
   cursor: pointer; text-align: center;
@@ -213,12 +202,9 @@ body.screen-lang #footer  { background: #fff; border-color: var(--border); color
   transition: background .12s, transform .1s, box-shadow .12s;
   user-select: none;
 }
-.num-key:hover  { background: var(--bg3); box-shadow: var(--shadow); }
+.num-key:hover  { background: var(--bg3); border-color: rgba(26,86,160,.2); box-shadow: var(--shadow); }
 .num-key:active { transform: scale(.94); background: var(--bg3); box-shadow: none; }
-.num-key.del    {
-  font-size: 18px;
-  background: #FEF2F2; border-color: #FECACA; color: var(--red);
-}
+.num-key.del    { background: #FEF2F2; border-color: #FECACA; color: var(--red); }
 .num-key.del:hover { background: #FEE2E2; }
 
 /* ── 버튼 공통 ───────────────────────────────── */
@@ -232,12 +218,22 @@ button {
 button:disabled      { opacity: .35; cursor: default; }
 button:not(:disabled):active { transform: scale(.97); }
 
-.btn-primary  { background: var(--blue); color: #fff; flex: 1; box-shadow: 0 2px 8px rgba(21,101,192,.3); }
-.btn-primary:hover { background: var(--blue-mid); box-shadow: 0 4px 14px rgba(21,101,192,.35); }
-.btn-outline  { background: #fff; border: 1.5px solid var(--border); color: var(--text); flex: 1; }
+/* 어드민 active nav 오렌지 액센트 반영 */
+.btn-primary  {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+  color: #fff; flex: 1;
+  box-shadow: 0 2px 10px rgba(26, 86, 160, 0.35);
+}
+.btn-primary:not(:disabled):hover {
+  background: linear-gradient(135deg, var(--blue-mid) 0%, var(--blue) 100%);
+  box-shadow: 0 4px 16px rgba(26, 86, 160, 0.40);
+  transform: translateY(-1px);
+}
+.btn-outline  { background: var(--bg2); border: 1.5px solid var(--border); color: var(--text); flex: 1; }
 .btn-outline:hover { background: var(--bg3); }
 .btn-pass     { background: var(--green-dark); color: #fff; width: 100%; box-shadow: 0 2px 8px rgba(5,150,105,.3); }
-.btn-retry    { background: var(--orange); color: #fff; width: 100%; box-shadow: 0 2px 8px rgba(249,115,22,.3); }
+.btn-retry    { background: var(--accent); color: #fff; width: 100%; box-shadow: 0 2px 10px rgba(244,124,32,.4); }
+.btn-retry:hover { filter: brightness(1.06); transform: translateY(-1px); }
 .btn-ghost-lg { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); width: 100%; margin-top: 12px; }
 .btn-lg       { padding: 18px 20px; font-size: 17px; width: 100%; }
 .btn-sub      { display: block; font-size: 12px; font-weight: 400; opacity: .8; margin-top: 3px; }
@@ -245,16 +241,16 @@ button:not(:disabled):active { transform: scale(.97); }
 /* ── ③ 카메라 준비 ───────────────────────────── */
 .pin-badge {
   display: inline-block;
-  background: var(--blue-light); border: 1.5px solid rgba(21,101,192,.25);
+  background: var(--accent-light); border: 1.5px solid var(--accent-border);
   border-radius: 20px; padding: 6px 16px;
-  font-size: 13px; font-weight: 600; color: var(--blue-dark);
+  font-size: 13px; font-weight: 700; color: var(--accent);
   text-align: center;
 }
 
 .cam-view {
   position: relative; background: #0A0F16;
   border-radius: var(--radius); min-height: 220px; overflow: hidden;
-  border: 1px solid #1E3040;
+  border: 1px solid rgba(26,86,160,.2);
 }
 .cam-placeholder {
   display: flex; flex-direction: column;
@@ -269,37 +265,38 @@ button:not(:disabled):active { transform: scale(.97); }
   border-radius: var(--radius); transform: scaleX(-1);
 }
 
-/* 코너 마커 */
+/* 코너 마커 — 액센트 오렌지 */
 .corner {
   position: absolute; width: 20px; height: 20px;
-  border-color: var(--blue); border-style: solid;
+  border-color: var(--accent); border-style: solid;
 }
 .corner.tl { top:10px; left:10px;   border-width:2px 0 0 2px; }
 .corner.tr { top:10px; right:10px;  border-width:2px 2px 0 0; }
 .corner.bl { bottom:10px; left:10px;  border-width:0 0 2px 2px; }
 .corner.br { bottom:10px; right:10px; border-width:0 2px 2px 0; }
 
-/* PPE 카드 */
+/* PPE 카드 — 어드민 카드 동일 */
 .ppe-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .ppe-card {
-  background: #fff; border: 1px solid var(--border);
+  background: var(--bg2);
+  border: 1px solid var(--border-card);
   border-radius: var(--radius); padding: 14px 10px; text-align: center;
   box-shadow: var(--shadow-sm);
 }
 .ppe-emoji    { font-size: 28px; margin-bottom: 6px; }
 .ppe-name     { font-size: 14px; font-weight: 600; color: var(--text); }
 .ppe-name-ko  { font-size: 11px; color: var(--text2); margin-top: 2px; }
-.ppe-check    { font-size: 12px; color: var(--green-dark); margin-top: 5px; font-weight: 600; }
+.ppe-check    { font-size: 12px; color: var(--blue); margin-top: 5px; font-weight: 600; }
 .ppe-check-ko { font-size: 10px; color: var(--text2); }
 
 /* ── ④ 스캔 중 ───────────────────────────────── */
-.scan-label    { font-size: 17px; font-weight: 600; color: var(--text); }
+.scan-label    { font-size: 17px; font-weight: 700; color: var(--accent); }
 .scan-label-ko { font-size: 12px; color: var(--text2); margin-top: 3px; }
 
 .scan-view {
   position: relative; background: #060E16;
   border-radius: var(--radius); height: 230px; overflow: hidden;
-  margin-bottom: 18px; border: 1px solid #1A2E40;
+  margin-bottom: 18px; border: 1px solid rgba(26,86,160,.2);
 }
 .scan-bg {
   position: absolute; inset: 0;
@@ -314,8 +311,7 @@ button:not(:disabled):active { transform: scale(.97); }
 }
 .person-head {
   width: 42px; height: 42px; border-radius: 50%;
-  background: #1A2D3E; border: 1.5px solid #2A4055;
-  margin-bottom: 2px;
+  background: #1A2D3E; border: 1.5px solid #2A4055; margin-bottom: 2px;
 }
 .person-body {
   width: 70px; height: 105px;
@@ -326,25 +322,20 @@ button:not(:disabled):active { transform: scale(.97); }
 /* PPE 감지 박스 */
 .ppe-box-overlay {
   position: absolute;
-  border: 2px solid var(--yellow);
+  border: 2px solid var(--accent);
   border-radius: 4px;
   transition: border-color .35s;
 }
 .ppe-box-overlay.detected { border-color: var(--green); }
 .ppe-box-overlay.missing  { border-color: var(--red); }
 
-.ppe-box-overlay.helmet {
-  width: 58px; height: 30px;
-  top: 26px; left: 50%; transform: translateX(-50%);
-}
-.ppe-box-overlay.vest {
-  width: 82px; height: 78px;
-  top: 100px; left: 50%; transform: translateX(-50%);
-}
+.ppe-box-overlay.helmet { width: 58px; height: 30px; top: 26px; left: 50%; transform: translateX(-50%); }
+.ppe-box-overlay.vest   { width: 82px; height: 78px; top: 100px; left: 50%; transform: translateX(-50%); }
+
 .box-label {
   position: absolute; top: -19px; left: 0;
   font-size: 11px; font-weight: 700;
-  color: var(--yellow); white-space: nowrap;
+  color: var(--accent); white-space: nowrap;
   transition: color .35s;
 }
 .ppe-box-overlay.detected .box-label { color: var(--green); }
@@ -353,8 +344,8 @@ button:not(:disabled):active { transform: scale(.97); }
 /* 스캔 라인 */
 .scan-line {
   position: absolute; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent 0%, var(--blue-mid) 50%, transparent 100%);
-  box-shadow: 0 0 10px var(--blue-mid), 0 0 3px #fff;
+  background: linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
+  box-shadow: 0 0 10px var(--accent);
   animation: scan-move 1.5s linear infinite;
 }
 @keyframes scan-move { 0% { top:0; } 100% { top:100%; } }
@@ -363,11 +354,11 @@ button:not(:disabled):active { transform: scale(.97); }
 .progress-wrap   { margin-bottom: 14px; }
 .progress-top    { display: flex; justify-content: space-between; margin-bottom: 5px; }
 .prog-label      { font-size: 12px; color: var(--text2); }
-.prog-pct        { font-size: 12px; font-weight: 700; color: var(--blue); }
+.prog-pct        { font-size: 12px; font-weight: 700; color: var(--accent); }
 .progress-track  { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
 .progress-fill   {
   height: 100%;
-  background: linear-gradient(90deg, var(--blue) 0%, var(--blue-mid) 100%);
+  background: linear-gradient(90deg, var(--blue) 0%, var(--accent) 100%);
   border-radius: 3px;
   transition: width .1s linear;
 }
@@ -376,7 +367,7 @@ button:not(:disabled):active { transform: scale(.97); }
 .ppe-status-list { display: flex; flex-direction: column; gap: 8px; }
 .ppe-status {
   display: flex; align-items: center; gap: 12px;
-  background: #fff; border: 1px solid var(--border);
+  background: var(--bg2); border: 1px solid var(--border-card);
   border-radius: var(--r-sm); padding: 11px 14px;
   box-shadow: var(--shadow-sm);
   transition: border-color .3s, background .3s;
@@ -396,19 +387,18 @@ button:not(:disabled):active { transform: scale(.97); }
 
 /* ── ⑤ PASS 카드 ─────────────────────────────── */
 .result-card {
-  border-radius: 16px; padding: 28px 20px; text-align: center;
+  border-radius: var(--radius); padding: 28px 20px; text-align: center;
   box-shadow: var(--shadow-lg);
 }
-
 .pass-card {
   background: var(--green-bg);
   border: 1.5px solid #6EE7B7;
-  box-shadow: 0 0 40px rgba(16,185,129,.12), var(--shadow-lg);
+  box-shadow: 0 0 40px rgba(16,185,129,.10), var(--shadow-lg);
 }
 .fail-card {
   background: var(--red-bg);
   border: 1.5px solid #FECACA;
-  box-shadow: 0 0 40px rgba(239,68,68,.08), var(--shadow-lg);
+  box-shadow: 0 0 40px rgba(239,68,68,.07), var(--shadow-lg);
 }
 
 .result-emoji { font-size: 52px; margin-bottom: 10px; }
@@ -424,40 +414,28 @@ button:not(:disabled):active { transform: scale(.97); }
   font-size: 13px; font-weight: 600; color: var(--green-text);
   margin-bottom: 4px;
 }
-.fail-badge {
-  background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.25);
-  color: var(--red-text);
-}
+.fail-badge { background: var(--accent-light); border-color: var(--accent-border); color: var(--accent); }
 
 /* TTS 박스 */
-.tts-box {
-  border-radius: var(--r-sm); padding: 12px 14px;
-  margin: 14px 0; text-align: left;
-}
+.tts-box { border-radius: var(--r-sm); padding: 12px 14px; margin: 14px 0; text-align: left; }
 .pass-tts { background: rgba(5,150,105,.07); border: 1px solid rgba(5,150,105,.2); }
-.fail-tts { background: rgba(239,68,68,.07); border: 1px solid rgba(239,68,68,.15); }
+.fail-tts { background: var(--accent-light); border: 1px solid var(--accent-border); }
 .tts-label      { font-size: 10px; font-weight: 700; letter-spacing: 1px; margin-bottom: 5px; }
 .pass-tts-label { color: var(--green-text); }
-.fail-tts-label { color: var(--red-text); }
+.fail-tts-label { color: var(--accent); }
 .tts-msg    { font-size: 14px; font-weight: 500; color: var(--text); }
 .tts-msg-ko { font-size: 12px; color: var(--text2); margin-top: 3px; }
 
 /* 자동 초기화 바 */
-.auto-reset-bar {
-  height: 4px; background: rgba(0,0,0,.08);
-  border-radius: 2px; overflow: hidden; margin: 14px 0 5px;
-}
-.auto-reset-fill {
-  height: 100%; background: var(--green-dark);
-  border-radius: 2px; width: 100%;
-}
+.auto-reset-bar  { height: 4px; background: rgba(0,0,0,.08); border-radius: 2px; overflow: hidden; margin: 14px 0 5px; }
+.auto-reset-fill { height: 100%; background: var(--green-dark); border-radius: 2px; width: 100%; }
 
 /* 가이드 박스 */
 .guide-box {
-  background: rgba(239,68,68,.04); border: 1px solid rgba(239,68,68,.12);
+  background: rgba(244,124,32,.05); border: 1px solid rgba(244,124,32,.15);
   border-radius: var(--r-sm); padding: 14px; margin: 12px 0; text-align: left;
 }
-.guide-title { font-size: 12px; font-weight: 700; color: var(--red-text); margin-bottom: 8px; }
+.guide-title { font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
 .guide-list  { padding-left: 16px; }
 .guide-list li       { font-size: 13px; margin-bottom: 5px; line-height: 1.55; color: var(--text); }
 .guide-list li span  { display: block; font-size: 11px; color: var(--text2); margin-top: 1px; }
@@ -474,7 +452,7 @@ button:not(:disabled):active { transform: scale(.97); }
 #footer {
   text-align: center; padding: 11px;
   font-size: 11px; color: var(--text2);
-  border-top: 1px solid var(--border); background: #fff;
+  border-top: 1px solid var(--border-card); background: var(--bg2);
 }
 
 /* ── 반응형 ──────────────────────────────────── */
@@ -490,32 +468,21 @@ button:not(:disabled):active { transform: scale(.97); }
 /* 태블릿 (600px 이상) */
 @media (min-width: 600px) {
   html, body { font-size: 18px; }
-
   #app { max-width: 700px; }
-
-  /* 헤더 */
   #header { padding: 18px 28px; }
   .header-icon  { font-size: 34px; }
   .header-title { font-size: 17px; letter-spacing: 1px; }
   .header-sub   { font-size: 12px; }
-
-  /* 메인 */
   #main { padding: 36px 32px 60px; }
-
-  /* 타이포 */
   .title-xl         { font-size: 38px; }
   .sub-text         { font-size: 17px; }
   .bilingual-native { font-size: 24px; }
   .bilingual-ko     { font-size: 15px; }
   .caption          { font-size: 14px; }
-
-  /* ① 언어 선택 */
   .lang-grid { gap: 18px; }
   .lang-btn  { padding: 28px 12px; border-radius: 18px; }
   .lang-flag { font-size: 52px; margin-bottom: 10px; }
   .lang-label { font-size: 16px; }
-
-  /* ② PIN */
   .flag-xl     { font-size: 68px; margin-bottom: 18px; }
   .pin-dots    { gap: 26px; margin: 28px 0 18px; }
   .pin-dot     { width: 28px; height: 28px; }
@@ -523,14 +490,10 @@ button:not(:disabled):active { transform: scale(.97); }
   .numpad      { max-width: 400px; gap: 14px; }
   .num-key     { padding: 24px 10px; font-size: 30px; border-radius: 14px; }
   .num-key.del { font-size: 22px; }
-
-  /* 버튼 */
   button     { padding: 18px 22px; font-size: 17px; border-radius: 14px; }
   .btn-lg    { padding: 22px 24px; font-size: 20px; }
   .btn-sub   { font-size: 13px; margin-top: 4px; }
   .btn-ghost { font-size: 15px; }
-
-  /* ③ 카메라 */
   .cam-view        { min-height: 340px; border-radius: 18px; }
   .cam-placeholder { min-height: 340px; }
   .cam-icon        { font-size: 54px; }
@@ -541,8 +504,6 @@ button:not(:disabled):active { transform: scale(.97); }
   .ppe-name        { font-size: 16px; }
   .ppe-check       { font-size: 14px; }
   .pin-badge       { font-size: 15px; padding: 8px 20px; }
-
-  /* ④ 스캔 */
   .scan-view { height: 360px; border-radius: 18px; }
   .person-head { width: 54px; height: 54px; }
   .person-body { width: 90px; height: 135px; }
@@ -557,8 +518,6 @@ button:not(:disabled):active { transform: scale(.97); }
   .status-name { font-size: 16px; }
   .status-ko   { font-size: 13px; }
   .status-tag  { font-size: 13px; padding: 4px 14px; }
-
-  /* ⑤⑥ PASS/FAIL */
   .result-card  { padding: 44px 36px; border-radius: 20px; }
   .result-emoji { font-size: 72px; margin-bottom: 14px; }
   .result-title { font-size: 48px; letter-spacing: 5px; }
@@ -576,27 +535,21 @@ button:not(:disabled):active { transform: scale(.97); }
 /* 아이패드 12.9" (min-width: 1024px) */
 @media (min-width: 1024px) {
   html, body { font-size: 20px; }
-
   #app { max-width: 860px; }
-
   #header { padding: 22px 36px; }
   .header-icon  { font-size: 40px; }
   .header-title { font-size: 20px; letter-spacing: 1.2px; }
   .header-sub   { font-size: 14px; }
-
   #main { padding: 48px 48px 72px; }
-
   .title-xl         { font-size: 52px; }
   .sub-text         { font-size: 20px; }
   .bilingual-native { font-size: 30px; }
   .bilingual-ko     { font-size: 18px; }
   .caption          { font-size: 16px; }
-
   .lang-grid { gap: 24px; }
   .lang-btn  { padding: 40px 16px; border-radius: 22px; }
   .lang-flag { font-size: 72px; margin-bottom: 14px; }
   .lang-label { font-size: 20px; }
-
   .flag-xl     { font-size: 88px; margin-bottom: 22px; }
   .pin-dots    { gap: 32px; margin: 36px 0 24px; }
   .pin-dot     { width: 36px; height: 36px; }
@@ -604,12 +557,10 @@ button:not(:disabled):active { transform: scale(.97); }
   .numpad      { max-width: 500px; gap: 18px; }
   .num-key     { padding: 32px 12px; font-size: 38px; border-radius: 18px; }
   .num-key.del { font-size: 28px; }
-
   button     { padding: 22px 28px; font-size: 20px; border-radius: 18px; }
   .btn-lg    { padding: 28px 32px; font-size: 24px; }
   .btn-sub   { font-size: 15px; margin-top: 5px; }
   .btn-ghost { font-size: 18px; }
-
   .cam-view        { min-height: 460px; border-radius: 22px; }
   .cam-placeholder { min-height: 460px; }
   .cam-icon        { font-size: 72px; }
@@ -623,7 +574,6 @@ button:not(:disabled):active { transform: scale(.97); }
   .ppe-check-ko    { font-size: 13px; }
   .pin-badge       { font-size: 18px; padding: 10px 26px; }
   .corner          { width: 28px; height: 28px; }
-
   .scan-view { height: 480px; border-radius: 22px; }
   .person-head { width: 70px; height: 70px; }
   .person-body { width: 116px; height: 174px; }
@@ -639,7 +589,6 @@ button:not(:disabled):active { transform: scale(.97); }
   .status-name { font-size: 20px; }
   .status-ko   { font-size: 15px; }
   .status-tag  { font-size: 15px; padding: 6px 18px; }
-
   .result-card  { padding: 60px 48px; border-radius: 28px; }
   .result-emoji { font-size: 96px; margin-bottom: 18px; }
   .result-title { font-size: 64px; letter-spacing: 7px; }
