@@ -20,6 +20,7 @@ from app.models.employee import Employee
 from app.schemas.check_session import CheckinResponse
 from app.services.blob_service import upload_image
 from app.services.cv_service import analyze_safety_image
+from app.services.notify_service import check_and_notify
 
 logger = logging.getLogger(__name__)
 
@@ -35,26 +36,50 @@ async def employee_checkin(
     """
     POST /employee/checkin
     정규직 사원의 안전물품 착용 여부를 판정한다.
-    하루 1회 기록. 이미 통과한 경우 재촬영 거부.
+    하루 최대 3회 시도, 3회 모두 실패 시 관리자 호출.
+
+    흐름:
+    1. 오늘 이미 통과했는지 확인 → 이미 통과 시 거부
+    2. 오늘 시도 횟수 확인 → 3회 초과 시 거부
+    3. 이미지 업로드 + AI 분석
+    4. 결과 DB 저장
+    5. 3회째 실패 시 관리자 호출
     """
     today = date.today()
 
-    # 오늘 이미 통과했는지 확인
+    # 1. 오늘 이미 통과했는지 확인
     existing = (
         db.query(CheckSession)
         .filter(
             CheckSession.employee_id == current_employee.id,
             CheckSession.date == today,
-            CheckSession.status == "pass",
+            CheckSession.status.in_(["pass", "pass_override"]),
         )
         .first()
     )
     if existing:
         raise HTTPException(status_code=400, detail="오늘 이미 통과한 기록이 있습니다")
 
-    # 이미지 업로드 + AI 분석
+    # 2. 오늘 시도 횟수 확인 — 최대 3회
+    today_count = (
+        db.query(CheckSession)
+        .filter(
+            CheckSession.employee_id == current_employee.id,
+            CheckSession.date == today,
+        )
+        .count()
+    )
+    if today_count >= 3:
+        raise HTTPException(
+            status_code=400,
+            detail="오늘 최대 시도 횟수(3회)를 초과했습니다. 관리자에게 문의하세요.",
+        )
+
+    attempt_count = today_count + 1
+
+    # 3. 이미지 업로드 + AI 분석
     image_data = await image.read()
-    upload_image(image_data)
+    image_url = upload_image(image_data)
     analysis = analyze_safety_image(image_data)
 
     helmet_pass = analysis["helmet_pass"]
@@ -62,38 +87,46 @@ async def employee_checkin(
     cv_confidence = analysis["cv_confidence"]
     status_val = "pass" if (helmet_pass and vest_pass) else "fail"
 
-    # check_sessions에 기록 (employee_id 사용)
+    # 4. check_sessions에 기록 (employee_id 사용)
     session = CheckSession(
         employee_id=current_employee.id,
         date=today,
-        attempt_count=1,
+        attempt_count=attempt_count,
         helmet_pass=helmet_pass,
         vest_pass=vest_pass,
         cv_confidence=cv_confidence,
+        image_url=image_url,
         status=status_val,
     )
     db.add(session)
     db.commit()
     db.refresh(session)
 
+    # 5. 3회째 실패 시 관리자 호출
+    needs_admin = False
+    if status_val == "fail":
+        needs_admin = check_and_notify(db, current_employee, attempt_count, session.id)
+
     # 메시지
     if status_val == "pass":
         message = "안전물품 착용이 확인되었습니다. 안전한 작업 되세요!"
+    elif needs_admin:
+        message = f"안전물품 미착용 ({attempt_count}회 시도 모두 실패). 관리자가 호출되었습니다."
     else:
         missing = []
         if not helmet_pass:
             missing.append("안전모")
         if not vest_pass:
             missing.append("안전조끼")
-        message = f"{', '.join(missing)} 미감지. 착용 후 재시도해 주세요."
+        message = f"{', '.join(missing)} 미감지 ({attempt_count}/3회 시도)"
 
     return CheckinResponse(
         session_id=session.id,
         status=status_val,
-        attempt_count=1,
+        attempt_count=attempt_count,
         helmet_pass=helmet_pass,
         vest_pass=vest_pass,
         cv_confidence=cv_confidence,
         message=message,
-        needs_admin=False,
+        needs_admin=needs_admin,
     )

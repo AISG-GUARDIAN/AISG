@@ -41,3 +41,78 @@ class StatsResponse(BaseModel):
     dashboard: DashboardStats
     by_group: list[GroupStats] = []
     by_period: list[PeriodStats] = []
+
+
+# ── 대시보드 전용 통합 응답 ──
+
+
+class KpiData(BaseModel):
+    """대시보드 KPI 카드 데이터."""
+
+    safety_rate: float
+    total_pass: int
+    total_fail: int
+    pending_count: int
+    total_all: int
+    yesterday_rate: float
+    last_hour_pass: int
+    last_hour_fail: int
+    pending_urgent: int
+
+
+class HourlyData(BaseModel):
+    """시간대별 pass/fail 건수."""
+
+    hour: int
+    pass_count: int
+    fail_count: int
+
+
+class LanguageData(BaseModel):
+    """언어별 체크인 분포."""
+
+    language: str
+    label: str
+    count: int
+    fail_count: int
+
+
+class SessionRecord(BaseModel):
+    """체크인 기록 테이블 행."""
+
+    id: int
+    language: str
+    label: str
+    checked_at: str
+    status: str
+
+
+class DailyRow(BaseModel):
+    """일별 집계 행."""
+
+    day: int
+    total: int
+    pass_count: int
+    fail_count: int
+    by_lang: dict[str, int] = {}
+
+
+class MonthSummary(BaseModel):
+    """월별 요약."""
+
+    month: int
+    total: int
+    pass_count: int
+    fail_count: int
+    by_lang: dict[str, int] = {}
+
+
+class FullDashboardResponse(BaseModel):
+    """대시보드 전체 데이터를 한 번에 반환하는 통합 응답."""
+
+    kpi: KpiData
+    hourly: list[HourlyData] = []
+    by_language: list[LanguageData] = []
+    sessions: list[SessionRecord] = []
+    daily: list[DailyRow] = []
+    monthly: list[MonthSummary] = []

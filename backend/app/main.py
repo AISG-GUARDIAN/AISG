@@ -16,7 +16,7 @@ from app.database import Base, engine, SessionLocal
 from app.models import Admin, Employee, Group  # noqa: F401 — Base.metadata에 모델 등록
 from app.routers import auth
 from app.routers.user import checkin, emp_checkin
-from app.routers.admin import groups, users, sessions, stats, reports
+from app.routers.admin import groups, users, sessions, stats, notifications
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ app.include_router(groups.router)
 app.include_router(users.router)
 app.include_router(sessions.router)
 app.include_router(stats.router)
-app.include_router(reports.router)
+app.include_router(notifications.router)
 
 
 @app.get("/api/health")

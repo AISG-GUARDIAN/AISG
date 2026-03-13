@@ -15,7 +15,6 @@ const state = {
 };
 
 const AUTO_RESET_SEC = 7;
-const API_BASE = "";
 
 /* ── 인증 가드 — 토큰 없으면 화면 전환 차단 ── */
 const AUTH_REQUIRED_SCREENS = new Set([
@@ -115,7 +114,7 @@ if ($("lang-grid")) {
     LANGUAGES.forEach(({ code, flag, label }) => {
       const btn = document.createElement("button");
       btn.className = "lang-btn";
-      btn.innerHTML = `<span class="lang-flag">${flag}</span><span class="lang-label">${label}</span>`;
+      btn.innerHTML = `<span class="lang-flag ${flag === 'ot' ? 'ot' : ''}">${flag === 'ot' ? '🌍' : flag}</span><span class="lang-label">${label}</span>`;
       btn.addEventListener("click", () => selectLang(code, flag));
       grid.appendChild(btn);
     });
@@ -206,18 +205,8 @@ if ($("lang-grid")) {
     btn.disabled = true;
 
     try {
-      const res = await fetch(`${API_BASE}/auth/user/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ last_call_number: state.pin, language: state.lang }),
-      });
+      const data = await api.loginUser(state.pin, state.lang);
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("role", data.role);
       state.authenticated = true;
@@ -319,18 +308,8 @@ if ($("emp-input")) {
     msgEl.textContent = "로그인 중...";
 
     try {
-      const res = await fetch(`${API_BASE}/auth/employee/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emp_no: empNo, language: lang }),
-      });
+      const data = await api.loginEmployee(empNo, lang);
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || "로그인 실패");
-      }
-
-      const data = await res.json();
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("role", data.role);
 
