@@ -32,8 +32,16 @@ OPENAI_API_KEY=your_api_key_here
 
 4. Backend 서버 실행
 ```bash
+> pip을 사용하셔서 가상환경을 쓰시던 아님 uv를 쓰시던 상관없습니다.
+
+pip install -r backend/requirements.txt
+또는 
+uv pip install -r backend/requirements.txt
+
 cd backend
-uvicorn main:app --reload
+uvicorn app.main:app --reload 
+또는
+uv run uvicorn app.main:app --reload
 ```
 
 5. 브라우저에서 `http://localhost:8000` 접속

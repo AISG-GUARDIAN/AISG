@@ -13,9 +13,9 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
 from app.database import Base, engine, SessionLocal
-from app.models import Admin, Group  # noqa: F401 — Base.metadata에 모델 등록
+from app.models import Admin, Employee, Group  # noqa: F401 — Base.metadata에 모델 등록
 from app.routers import auth
-from app.routers.user import checkin
+from app.routers.user import checkin, emp_checkin
 from app.routers.admin import groups, users, sessions, stats, reports
 
 logger = logging.getLogger(__name__)
@@ -45,15 +45,20 @@ def _create_default_admin():
     settings = get_settings()
     db = SessionLocal()
     try:
+        # employees 테이블에 사번 등록
+        emp = db.query(Employee).filter(Employee.emp_no == settings.DEFAULT_EMP_NO).first()
+        if emp is None:
+            db.add(Employee(emp_no=settings.DEFAULT_EMP_NO))
+            db.commit()
+            logger.info(f"기본 사번 등록: {settings.DEFAULT_EMP_NO}")
+
+        # admins 테이블에 관리자 등록
         existing = db.query(Admin).filter(Admin.emp_no == settings.DEFAULT_EMP_NO).first()
         if existing is None:
-            admin = Admin(
-                emp_no=settings.DEFAULT_EMP_NO,
-                name=settings.DEFAULT_ADMIN_NAME,
-            )
+            admin = Admin(emp_no=settings.DEFAULT_EMP_NO)
             db.add(admin)
             db.commit()
-            logger.info(f"기본 관리자 계정 생성: {settings.DEFAULT_EMP_NO} ({settings.DEFAULT_ADMIN_NAME})")
+            logger.info(f"기본 관리자 계정 생성: {settings.DEFAULT_EMP_NO}")
         else:
             logger.info("기본 관리자 계정이 이미 존재합니다")
     finally:
@@ -80,6 +85,7 @@ app.add_middleware(
 # === 라우터 등록 ===
 app.include_router(auth.router)
 app.include_router(checkin.router)
+app.include_router(emp_checkin.router)
 app.include_router(groups.router)
 app.include_router(users.router)
 app.include_router(sessions.router)

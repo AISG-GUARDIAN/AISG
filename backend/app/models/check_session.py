@@ -1,7 +1,7 @@
 """
 체크인 세션(CheckSession) ORM 모델.
-작업자의 안전물품(안전모·조끼) 촬영·판정 기록을 저장한다.
-하루 최대 3회 시도, 안전모/조끼 각각 pass/fail 판정.
+정규직/일용직 모두의 안전물품(안전모·조끼) 촬영·판정 기록을 저장한다.
+일용직은 user_id, 정규직은 employee_id로 식별하며 둘 중 하나만 채워진다.
 """
 
 from datetime import date, datetime, timezone
@@ -18,7 +18,8 @@ class CheckSession(Base):
 
     Attributes:
         id: 기본키
-        user_id: 작업자 FK
+        user_id: 일용직 작업자 FK (nullable)
+        employee_id: 정규직 사원 FK (nullable)
         date: 체크인 날짜
         attempt_count: 시도 횟수 (1~3)
         helmet_pass: 안전모 착용 여부 (Azure CV 결과)
@@ -32,8 +33,11 @@ class CheckSession(Base):
     __tablename__ = "check_sessions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
+    employee_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("employees.id", ondelete="RESTRICT"), nullable=True
     )
     date: Mapped[date] = mapped_column(Date, nullable=False)
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
@@ -50,4 +54,5 @@ class CheckSession(Base):
 
     # 관계
     user = relationship("User", back_populates="check_sessions")
+    employee = relationship("Employee", back_populates="checkins")
     override = relationship("AdminOverride", back_populates="session", uselist=False)
