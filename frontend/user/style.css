@@ -1,35 +1,50 @@
 /* ──────────────────────────────────────────────────
    style.css  — AI SAFE GUARDIAN · Worker Check-In
-   목업 기반 디자인 시스템
+   라이트 테마 / 어드민 대시보드 무드앤톤 적용
 ────────────────────────────────────────────────── */
 
 /* ── 리셋 & 토큰 ──────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:          #060C0E;
-  --bg2:         #0D1520;
-  --bg3:         #141E2C;
-  --border:      #1E2D3D;
-  --text:        #E6EDF3;
-  --text2:       #7A8898;
+  /* 배경 */
+  --bg:    #F3F6FB;
+  --bg2:   #FFFFFF;
+  --bg3:   #EEF2F8;
+  --border: #E2E8F0;
 
-  /* 액센트 */
-  --yellow:      #F5C518;
-  --yellow-bg:   rgba(245,197,24,.10);
-  --yellow-bd:   rgba(245,197,24,.35);
-  --blue:        #1565C0;
-  --green:       #00E676;
-  --green-dark:  #00A14B;
-  --green-bg:    #E8F5E9;   /* PASS 카드 라이트 */
-  --green-text:  #1B5E20;
-  --red:         #E53935;
-  --red-bg:      #FFF0EE;   /* FAIL 카드 라이트 */
-  --red-text:    #B71C1C;
-  --orange:      #BF5000;   /* 재시도 버튼 */
+  /* 텍스트 */
+  --text:  #1E293B;
+  --text2: #64748B;
 
-  --radius:  14px;
-  --r-sm:    10px;
+  /* 프라이머리 블루 (어드민과 동일) */
+  --blue:       #1565C0;
+  --blue-dark:  #0D47A1;
+  --blue-light: #E3F2FD;
+  --blue-mid:   #1976D2;
+
+  /* 상태 색상 */
+  --green:      #10B981;
+  --green-dark: #059669;
+  --green-bg:   #ECFDF5;
+  --green-text: #065F46;
+  --red:        #EF4444;
+  --red-bg:     #FEF2F2;
+  --red-text:   #991B1B;
+  --orange:     #F97316;
+
+  /* 핀 액센트 */
+  --yellow:    #F59E0B;
+  --yellow-bg: rgba(245,158,11,.12);
+  --yellow-bd: rgba(245,158,11,.35);
+
+  /* 그림자 */
+  --shadow-sm: 0 1px 3px rgba(30,41,59,.08), 0 1px 2px rgba(30,41,59,.05);
+  --shadow:    0 4px 12px rgba(30,41,59,.08), 0 2px 4px rgba(30,41,59,.05);
+  --shadow-lg: 0 10px 28px rgba(30,41,59,.10), 0 4px 10px rgba(30,41,59,.06);
+
+  --radius: 14px;
+  --r-sm:   10px;
 }
 
 html, body {
@@ -54,38 +69,51 @@ html, body {
 #app {
   min-height: 100vh;
   display: flex; flex-direction: column;
-  max-width: 500px; margin: 0 auto;
+  max-width: 520px; margin: 0 auto;
 }
 
 /* ── 헤더 ────────────────────────────────────── */
 #header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 18px;
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  background: var(--blue-dark);
   position: sticky; top: 0; z-index: 100;
 }
-/* 언어선택 화면에서 헤더 라이트 테마 */
-body.screen-lang #header {
-  background: #fff;
-  border-bottom: 1px solid #E0E0E0;
-}
-body.screen-lang #header .header-title { color: var(--blue); }
-body.screen-lang #header .header-sub   { color: #888; }
-body.screen-lang #header .btn-ghost    { color: #555; border-color: #ccc; }
-
 .header-logo  { display: flex; align-items: center; gap: 10px; }
 .header-icon  { font-size: 26px; }
-.header-title { font-size: 14px; font-weight: 700; letter-spacing: .8px; color: var(--blue); }
-.header-sub   { font-size: 10px; color: var(--text2); margin-top: 2px; }
+.header-title { font-size: 14px; font-weight: 700; letter-spacing: .8px; color: #FFFFFF; }
+.header-sub   { font-size: 10px; color: rgba(255,255,255,.6); margin-top: 2px; }
+.btn-ghost {
+  background: rgba(255,255,255,.15);
+  border: 1.5px solid rgba(255,255,255,.25);
+  color: #fff; font-size: 13px;
+  border-radius: var(--r-sm);
+  padding: 7px 14px; cursor: pointer;
+  transition: background .15s;
+}
+.btn-ghost:hover { background: rgba(255,255,255,.25); }
+
+/* 언어선택 화면 헤더는 라이트 */
+body.screen-lang #header {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+body.screen-lang #header .header-title { color: var(--blue-dark); }
+body.screen-lang #header .header-sub   { color: var(--text2); }
+body.screen-lang .btn-ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text2);
+}
 
 /* ── 메인 ────────────────────────────────────── */
 #main { flex: 1; padding: 24px 18px 44px; overflow-y: auto; }
 
-/* 언어선택 화면 라이트 배경 */
-body.screen-lang          { background: #F5F5F5; }
-body.screen-lang #main    { background: #F5F5F5; }
-body.screen-lang #footer  { background: #ECECEC; border-color: #ddd; color: #999; }
+/* 언어선택 화면 */
+body.screen-lang          { background: #F3F6FB; }
+body.screen-lang #main    { background: #F3F6FB; }
+body.screen-lang #footer  { background: #fff; border-color: var(--border); color: var(--text2); }
 
 /* ── 화면 전환 ───────────────────────────────── */
 .screen { display: none; }
@@ -95,7 +123,6 @@ body.screen-lang #footer  { background: #ECECEC; border-color: #ddd; color: #999
 @keyframes fadeIn  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
 @keyframes scaleIn { from { opacity:0; transform:scale(.93); }       to { opacity:1; transform:none; } }
 
-/* shake (PIN 4자리 미만 확인 시도) */
 @keyframes shake {
   0%,100% { transform:translateX(0); }
   20%,60% { transform:translateX(-6px); }
@@ -103,11 +130,21 @@ body.screen-lang #footer  { background: #ECECEC; border-color: #ddd; color: #999
 }
 .shake { animation: shake .4s ease; }
 
+/* ── 카드 래퍼 (공통) ────────────────────────── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  margin-bottom: 14px;
+}
+
 /* ── 타이포 ──────────────────────────────────── */
-.title-xl         { font-size: 30px; font-weight: 800; letter-spacing: 2px; text-align: center; margin-bottom: 6px; color: #111; }
-.sub-text         { text-align: center; color: #666; font-size: 14px; }
+.title-xl         { font-size: 28px; font-weight: 800; letter-spacing: 1.5px; text-align: center; margin-bottom: 6px; color: var(--text); }
+.sub-text         { text-align: center; color: var(--text2); font-size: 14px; }
 .caption          { text-align: center; color: var(--text2); font-size: 12px; }
-.bilingual-native { font-size: 19px; font-weight: 600; text-align: center; }
+.bilingual-native { font-size: 19px; font-weight: 600; text-align: center; color: var(--text); }
 .bilingual-ko     { font-size: 13px; color: var(--text2); text-align: center; margin-top: 3px; }
 
 /* ── ① 언어 선택 ─────────────────────────────── */
@@ -117,23 +154,24 @@ body.screen-lang #footer  { background: #ECECEC; border-color: #ddd; color: #999
   gap: 12px;
 }
 .lang-btn {
-  background: #F0F0F0;
-  border: 2px solid #D8D8D8;
+  background: #fff;
+  border: 1.5px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px 8px;
+  padding: 22px 8px;
   text-align: center;
   cursor: pointer;
-  transition: border-color .2s, background .2s, transform .2s, box-shadow .2s;
+  box-shadow: var(--shadow-sm);
+  transition: border-color .2s, background .2s, transform .18s, box-shadow .2s;
 }
 .lang-btn:hover {
-  border-color: var(--yellow);
-  background: #FDF8E0;
-  box-shadow: 0 4px 20px rgba(200,162,0,.25);
+  border-color: var(--blue);
+  background: var(--blue-light);
+  box-shadow: var(--shadow);
   transform: translateY(-4px);
 }
 .lang-btn:active { transform: translateY(-2px); }
-.lang-flag  { font-size: 32px; display: block; margin-bottom: 6px; }
-.lang-label { font-size: 13px; font-weight: 600; color: #333; }
+.lang-flag  { font-size: 32px; display: block; margin-bottom: 8px; }
+.lang-label { font-size: 13px; font-weight: 600; color: var(--text); }
 
 /* ── ② PIN 입력 ──────────────────────────────── */
 .flag-xl { font-size: 50px; text-align: center; margin-bottom: 14px; }
@@ -141,25 +179,25 @@ body.screen-lang #footer  { background: #ECECEC; border-color: #ddd; color: #999
 .pin-dots { display: flex; justify-content: center; gap: 18px; margin: 20px 0 14px; }
 .pin-dot {
   width: 20px; height: 20px; border-radius: 50%;
-  border: 2px solid #4A6A70; background: transparent;
+  border: 2px solid var(--border); background: transparent;
   transition: background .15s, border-color .15s, box-shadow .15s, transform .15s;
 }
 .pin-dot.filled {
-  background: var(--yellow);
-  border-color: var(--yellow);
-  box-shadow: 0 0 14px rgba(245,197,24,.6);
+  background: var(--blue);
+  border-color: var(--blue);
+  box-shadow: 0 0 12px rgba(21,101,192,.45);
   transform: scale(1.15);
 }
 
 .pin-masking {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   font-size: 17px;
-  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
   padding: 11px 18px; margin-bottom: 22px;
 }
 .masking-label { color: var(--text2); font-size: 12px; }
 .masking-dots  { letter-spacing: 2px; color: var(--text2); }
-.masking-input { color: var(--yellow); font-weight: 700; letter-spacing: 6px; }
+.masking-input { color: var(--blue); font-weight: 700; letter-spacing: 6px; }
 
 /* 숫자패드 */
 .numpad {
@@ -167,17 +205,21 @@ body.screen-lang #footer  { background: #ECECEC; border-color: #ddd; color: #999
   gap: 10px; max-width: 300px; margin: 0 auto;
 }
 .num-key {
-  background: var(--bg2); border: 1px solid var(--border);
+  background: #fff; border: 1.5px solid var(--border);
   border-radius: var(--r-sm); padding: 16px 8px;
   font-size: 22px; font-weight: 600; color: var(--text);
   cursor: pointer; text-align: center;
-  transition: background .12s, transform .1s;
+  box-shadow: var(--shadow-sm);
+  transition: background .12s, transform .1s, box-shadow .12s;
   user-select: none;
 }
-.num-key:hover  { background: var(--bg3); }
-.num-key:active { transform: scale(.94); background: var(--bg3); }
-.num-key.del    { font-size: 18px; background: rgba(229,57,53,.15); border-color: rgba(229,57,53,.3); color: #E57373; }
-.num-key.del:hover { background: rgba(229,57,53,.25); }
+.num-key:hover  { background: var(--bg3); box-shadow: var(--shadow); }
+.num-key:active { transform: scale(.94); background: var(--bg3); box-shadow: none; }
+.num-key.del    {
+  font-size: 18px;
+  background: #FEF2F2; border-color: #FECACA; color: var(--red);
+}
+.num-key.del:hover { background: #FEE2E2; }
 
 /* ── 버튼 공통 ───────────────────────────────── */
 .row-btns { display: flex; gap: 10px; }
@@ -185,31 +227,32 @@ body.screen-lang #footer  { background: #ECECEC; border-color: #ddd; color: #999
 button {
   border: none; border-radius: var(--r-sm); padding: 14px 18px;
   font-size: 15px; font-weight: 600; cursor: pointer;
-  transition: opacity .15s, transform .1s;
+  transition: opacity .15s, transform .1s, box-shadow .15s;
 }
 button:disabled      { opacity: .35; cursor: default; }
 button:not(:disabled):active { transform: scale(.97); }
 
-.btn-primary  { background: var(--blue); color: #fff; flex: 1; }
-.btn-outline  { background: transparent; border: 1.5px solid var(--border); color: var(--text); flex: 1; }
-.btn-pass     { background: var(--green-dark); color: #fff; width: 100%; }
-.btn-retry    { background: var(--orange); color: #fff; width: 100%; }
-.btn-ghost    { background: transparent; border: 1.5px solid var(--border); color: var(--text2); font-size: 13px; }
-.btn-ghost-lg { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); color: var(--text); width: 100%; margin-top: 12px; }
+.btn-primary  { background: var(--blue); color: #fff; flex: 1; box-shadow: 0 2px 8px rgba(21,101,192,.3); }
+.btn-primary:hover { background: var(--blue-mid); box-shadow: 0 4px 14px rgba(21,101,192,.35); }
+.btn-outline  { background: #fff; border: 1.5px solid var(--border); color: var(--text); flex: 1; }
+.btn-outline:hover { background: var(--bg3); }
+.btn-pass     { background: var(--green-dark); color: #fff; width: 100%; box-shadow: 0 2px 8px rgba(5,150,105,.3); }
+.btn-retry    { background: var(--orange); color: #fff; width: 100%; box-shadow: 0 2px 8px rgba(249,115,22,.3); }
+.btn-ghost-lg { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); width: 100%; margin-top: 12px; }
 .btn-lg       { padding: 18px 20px; font-size: 17px; width: 100%; }
 .btn-sub      { display: block; font-size: 12px; font-weight: 400; opacity: .8; margin-top: 3px; }
 
 /* ── ③ 카메라 준비 ───────────────────────────── */
 .pin-badge {
   display: inline-block;
-  background: var(--yellow-bg); border: 1.5px solid var(--yellow-bd);
+  background: var(--blue-light); border: 1.5px solid rgba(21,101,192,.25);
   border-radius: 20px; padding: 6px 16px;
-  font-size: 13px; font-weight: 600; color: var(--yellow);
+  font-size: 13px; font-weight: 600; color: var(--blue-dark);
   text-align: center;
 }
 
 .cam-view {
-  position: relative; background: #050B10;
+  position: relative; background: #0A0F16;
   border-radius: var(--radius); min-height: 220px; overflow: hidden;
   border: 1px solid #1E3040;
 }
@@ -229,7 +272,7 @@ button:not(:disabled):active { transform: scale(.97); }
 /* 코너 마커 */
 .corner {
   position: absolute; width: 20px; height: 20px;
-  border-color: #C8A200; border-style: solid;
+  border-color: var(--blue); border-style: solid;
 }
 .corner.tl { top:10px; left:10px;   border-width:2px 0 0 2px; }
 .corner.tr { top:10px; right:10px;  border-width:2px 2px 0 0; }
@@ -239,17 +282,18 @@ button:not(:disabled):active { transform: scale(.97); }
 /* PPE 카드 */
 .ppe-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .ppe-card {
-  background: var(--bg2); border: 1px solid var(--border);
+  background: #fff; border: 1px solid var(--border);
   border-radius: var(--radius); padding: 14px 10px; text-align: center;
+  box-shadow: var(--shadow-sm);
 }
 .ppe-emoji    { font-size: 28px; margin-bottom: 6px; }
-.ppe-name     { font-size: 14px; font-weight: 600; }
+.ppe-name     { font-size: 14px; font-weight: 600; color: var(--text); }
 .ppe-name-ko  { font-size: 11px; color: var(--text2); margin-top: 2px; }
-.ppe-check    { font-size: 12px; color: var(--green); margin-top: 5px; font-weight: 600; }
+.ppe-check    { font-size: 12px; color: var(--green-dark); margin-top: 5px; font-weight: 600; }
 .ppe-check-ko { font-size: 10px; color: var(--text2); }
 
 /* ── ④ 스캔 중 ───────────────────────────────── */
-.scan-label    { font-size: 17px; font-weight: 600; }
+.scan-label    { font-size: 17px; font-weight: 600; color: var(--text); }
 .scan-label-ko { font-size: 12px; color: var(--text2); margin-top: 3px; }
 
 .scan-view {
@@ -306,11 +350,11 @@ button:not(:disabled):active { transform: scale(.97); }
 .ppe-box-overlay.detected .box-label { color: var(--green); }
 .ppe-box-overlay.missing  .box-label { color: var(--red); }
 
-/* 스캔 라인 — 녹색 그라데이션 */
+/* 스캔 라인 */
 .scan-line {
   position: absolute; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent 0%, var(--green) 50%, transparent 100%);
-  box-shadow: 0 0 10px var(--green), 0 0 3px #fff;
+  background: linear-gradient(90deg, transparent 0%, var(--blue-mid) 50%, transparent 100%);
+  box-shadow: 0 0 10px var(--blue-mid), 0 0 3px #fff;
   animation: scan-move 1.5s linear infinite;
 }
 @keyframes scan-move { 0% { top:0; } 100% { top:100%; } }
@@ -319,11 +363,11 @@ button:not(:disabled):active { transform: scale(.97); }
 .progress-wrap   { margin-bottom: 14px; }
 .progress-top    { display: flex; justify-content: space-between; margin-bottom: 5px; }
 .prog-label      { font-size: 12px; color: var(--text2); }
-.prog-pct        { font-size: 12px; font-weight: 700; color: var(--green); }
+.prog-pct        { font-size: 12px; font-weight: 700; color: var(--blue); }
 .progress-track  { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
 .progress-fill   {
   height: 100%;
-  background: linear-gradient(90deg, var(--blue) 0%, var(--green) 100%);
+  background: linear-gradient(90deg, var(--blue) 0%, var(--blue-mid) 100%);
   border-radius: 3px;
   transition: width .1s linear;
 }
@@ -332,34 +376,39 @@ button:not(:disabled):active { transform: scale(.97); }
 .ppe-status-list { display: flex; flex-direction: column; gap: 8px; }
 .ppe-status {
   display: flex; align-items: center; gap: 12px;
-  background: var(--bg2); border: 1px solid var(--border);
+  background: #fff; border: 1px solid var(--border);
   border-radius: var(--r-sm); padding: 11px 14px;
+  box-shadow: var(--shadow-sm);
   transition: border-color .3s, background .3s;
 }
-.ppe-status.detected { border-color: var(--green);  background: rgba(0,230,118,.07); }
-.ppe-status.missing  { border-color: var(--red);    background: rgba(229,57,53,.07); }
+.ppe-status.detected { border-color: var(--green);  background: var(--green-bg); }
+.ppe-status.missing  { border-color: var(--red);    background: var(--red-bg); }
 
 .status-icon { font-size: 20px; }
-.status-name { font-size: 14px; font-weight: 600; flex: 1; }
+.status-name { font-size: 14px; font-weight: 600; flex: 1; color: var(--text); }
 .status-ko   { font-size: 11px; color: var(--text2); margin-top: 2px; }
 .status-tag  {
   font-size: 11px; font-weight: 700; padding: 3px 10px;
   border-radius: 20px; background: var(--bg3); color: var(--text2); white-space: nowrap;
 }
-.ppe-status.detected .status-tag { background: var(--green); color: #000; }
+.ppe-status.detected .status-tag { background: var(--green); color: #fff; }
 .ppe-status.missing  .status-tag { background: var(--red);   color: #fff; }
 
 /* ── ⑤ PASS 카드 ─────────────────────────────── */
-.result-card { border-radius: 16px; padding: 28px 20px; text-align: center; }
+.result-card {
+  border-radius: 16px; padding: 28px 20px; text-align: center;
+  box-shadow: var(--shadow-lg);
+}
 
 .pass-card {
   background: var(--green-bg);
-  border: 1.5px solid #A5D6A7;
-  box-shadow: 0 0 60px rgba(0,230,118,.15);
+  border: 1.5px solid #6EE7B7;
+  box-shadow: 0 0 40px rgba(16,185,129,.12), var(--shadow-lg);
 }
 .fail-card {
   background: var(--red-bg);
-  border: 1.5px solid #FFCDD2;
+  border: 1.5px solid #FECACA;
+  box-shadow: 0 0 40px rgba(239,68,68,.08), var(--shadow-lg);
 }
 
 .result-emoji { font-size: 52px; margin-bottom: 10px; }
@@ -370,13 +419,13 @@ button:not(:disabled):active { transform: scale(.97); }
 .result-ppe-info { font-size: 13px; color: var(--green-text); margin-bottom: 8px; font-weight: 600; }
 .result-pin-badge {
   display: inline-block;
-  background: rgba(0,161,75,.12); border: 1.5px solid rgba(0,161,75,.3);
+  background: rgba(5,150,105,.1); border: 1.5px solid rgba(5,150,105,.25);
   border-radius: 20px; padding: 5px 14px;
   font-size: 13px; font-weight: 600; color: var(--green-text);
   margin-bottom: 4px;
 }
 .fail-badge {
-  background: rgba(229,57,53,.1); border-color: rgba(229,57,53,.3);
+  background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.25);
   color: var(--red-text);
 }
 
@@ -385,17 +434,17 @@ button:not(:disabled):active { transform: scale(.97); }
   border-radius: var(--r-sm); padding: 12px 14px;
   margin: 14px 0; text-align: left;
 }
-.pass-tts { background: rgba(0,161,75,.08); border: 1px solid rgba(0,161,75,.25); }
-.fail-tts { background: rgba(229,57,53,.08); border: 1px solid rgba(229,57,53,.2); }
+.pass-tts { background: rgba(5,150,105,.07); border: 1px solid rgba(5,150,105,.2); }
+.fail-tts { background: rgba(239,68,68,.07); border: 1px solid rgba(239,68,68,.15); }
 .tts-label      { font-size: 10px; font-weight: 700; letter-spacing: 1px; margin-bottom: 5px; }
 .pass-tts-label { color: var(--green-text); }
 .fail-tts-label { color: var(--red-text); }
-.tts-msg    { font-size: 14px; font-weight: 500; color: #1a1a1a; }
-.tts-msg-ko { font-size: 12px; color: #555; margin-top: 3px; }
+.tts-msg    { font-size: 14px; font-weight: 500; color: var(--text); }
+.tts-msg-ko { font-size: 12px; color: var(--text2); margin-top: 3px; }
 
 /* 자동 초기화 바 */
 .auto-reset-bar {
-  height: 4px; background: rgba(0,0,0,.1);
+  height: 4px; background: rgba(0,0,0,.08);
   border-radius: 2px; overflow: hidden; margin: 14px 0 5px;
 }
 .auto-reset-fill {
@@ -405,34 +454,34 @@ button:not(:disabled):active { transform: scale(.97); }
 
 /* 가이드 박스 */
 .guide-box {
-  background: rgba(0,0,0,.04); border: 1px solid rgba(0,0,0,.1);
+  background: rgba(239,68,68,.04); border: 1px solid rgba(239,68,68,.12);
   border-radius: var(--r-sm); padding: 14px; margin: 12px 0; text-align: left;
 }
 .guide-title { font-size: 12px; font-weight: 700; color: var(--red-text); margin-bottom: 8px; }
 .guide-list  { padding-left: 16px; }
-.guide-list li       { font-size: 13px; margin-bottom: 5px; line-height: 1.55; color: #333; }
-.guide-list li span  { display: block; font-size: 11px; color: #888; margin-top: 1px; }
+.guide-list li       { font-size: 13px; margin-bottom: 5px; line-height: 1.55; color: var(--text); }
+.guide-list li span  { display: block; font-size: 11px; color: var(--text2); margin-top: 1px; }
 
 /* 에스컬레이션 */
 .escalation-box {
-  background: rgba(229,57,53,.06); border: 1px solid rgba(229,57,53,.2);
+  background: rgba(239,68,68,.05); border: 1px solid rgba(239,68,68,.18);
   border-radius: var(--r-sm); padding: 16px; margin-top: 14px; text-align: center;
 }
 .escalation-text { font-size: 15px; font-weight: 700; color: var(--red-text); margin-bottom: 5px; }
-.escalation-ko   { font-size: 12px; color: #888; }
+.escalation-ko   { font-size: 12px; color: var(--text2); }
 
 /* ── 푸터 ────────────────────────────────────── */
 #footer {
   text-align: center; padding: 11px;
   font-size: 11px; color: var(--text2);
-  border-top: 1px solid var(--border); background: var(--bg2);
+  border-top: 1px solid var(--border); background: #fff;
 }
 
 /* ── 반응형 ──────────────────────────────────── */
 
 /* 소형 폰 */
 @media (max-width: 380px) {
-  .title-xl { font-size: 24px; }
+  .title-xl { font-size: 22px; }
   .lang-grid { gap: 8px; }
   .num-key { padding: 13px 6px; font-size: 20px; }
   .lang-flag { font-size: 26px; }
@@ -454,7 +503,7 @@ button:not(:disabled):active { transform: scale(.97); }
   #main { padding: 36px 32px 60px; }
 
   /* 타이포 */
-  .title-xl         { font-size: 40px; }
+  .title-xl         { font-size: 38px; }
   .sub-text         { font-size: 17px; }
   .bilingual-native { font-size: 24px; }
   .bilingual-ko     { font-size: 15px; }
@@ -463,37 +512,37 @@ button:not(:disabled):active { transform: scale(.97); }
   /* ① 언어 선택 */
   .lang-grid { gap: 18px; }
   .lang-btn  { padding: 28px 12px; border-radius: 18px; }
-  .lang-flag { font-size: 52px; margin-bottom: 10px; }   /* 기획서: 최소 80×80px 충족 */
+  .lang-flag { font-size: 52px; margin-bottom: 10px; }
   .lang-label { font-size: 16px; }
 
   /* ② PIN */
-  .flag-xl   { font-size: 68px; margin-bottom: 18px; }
-  .pin-dots  { gap: 26px; margin: 28px 0 18px; }
-  .pin-dot   { width: 28px; height: 28px; }
+  .flag-xl     { font-size: 68px; margin-bottom: 18px; }
+  .pin-dots    { gap: 26px; margin: 28px 0 18px; }
+  .pin-dot     { width: 28px; height: 28px; }
   .pin-masking { font-size: 20px; padding: 14px 22px; margin-bottom: 28px; }
-  .numpad    { max-width: 400px; gap: 14px; }
-  .num-key   { padding: 24px 10px; font-size: 30px; border-radius: 14px; }
+  .numpad      { max-width: 400px; gap: 14px; }
+  .num-key     { padding: 24px 10px; font-size: 30px; border-radius: 14px; }
   .num-key.del { font-size: 22px; }
 
-  /* 버튼 공통 */
+  /* 버튼 */
   button     { padding: 18px 22px; font-size: 17px; border-radius: 14px; }
   .btn-lg    { padding: 22px 24px; font-size: 20px; }
   .btn-sub   { font-size: 13px; margin-top: 4px; }
   .btn-ghost { font-size: 15px; }
 
-  /* ③ 카메라 준비 */
+  /* ③ 카메라 */
   .cam-view        { min-height: 340px; border-radius: 18px; }
   .cam-placeholder { min-height: 340px; }
   .cam-icon        { font-size: 54px; }
   .cam-label       { font-size: 16px; }
   #cam-video       { height: 340px; border-radius: 18px; }
   .ppe-card        { padding: 18px 14px; border-radius: 18px; }
-  .ppe-emoji       { font-size: 36px; margin-bottom: 8px; }
+  .ppe-emoji       { font-size: 36px; }
   .ppe-name        { font-size: 16px; }
   .ppe-check       { font-size: 14px; }
   .pin-badge       { font-size: 15px; padding: 8px 20px; }
 
-  /* ④ 스캔 중 */
+  /* ④ 스캔 */
   .scan-view { height: 360px; border-radius: 18px; }
   .person-head { width: 54px; height: 54px; }
   .person-body { width: 90px; height: 135px; }
@@ -509,21 +558,18 @@ button:not(:disabled):active { transform: scale(.97); }
   .status-ko   { font-size: 13px; }
   .status-tag  { font-size: 13px; padding: 4px 14px; }
 
-  /* ⑤⑥ PASS / FAIL */
+  /* ⑤⑥ PASS/FAIL */
   .result-card  { padding: 44px 36px; border-radius: 20px; }
   .result-emoji { font-size: 72px; margin-bottom: 14px; }
   .result-title { font-size: 48px; letter-spacing: 5px; }
-  .result-ppe-info { font-size: 16px; margin-bottom: 10px; }
+  .result-ppe-info { font-size: 16px; }
   .tts-box   { padding: 16px 18px; border-radius: 14px; }
-  .tts-label { font-size: 12px; }
   .tts-msg   { font-size: 17px; }
   .tts-msg-ko { font-size: 14px; }
-  .guide-list li { font-size: 15px; margin-bottom: 7px; }
+  .guide-list li { font-size: 15px; }
   .escalation-text { font-size: 18px; }
   .escalation-ko   { font-size: 14px; }
   .auto-reset-bar  { height: 6px; margin: 18px 0 7px; }
-
-  /* 푸터 */
   #footer { padding: 14px; font-size: 13px; }
 }
 
@@ -533,29 +579,24 @@ button:not(:disabled):active { transform: scale(.97); }
 
   #app { max-width: 860px; }
 
-  /* 헤더 */
   #header { padding: 22px 36px; }
   .header-icon  { font-size: 40px; }
   .header-title { font-size: 20px; letter-spacing: 1.2px; }
   .header-sub   { font-size: 14px; }
 
-  /* 메인 */
   #main { padding: 48px 48px 72px; }
 
-  /* 타이포 */
   .title-xl         { font-size: 52px; }
   .sub-text         { font-size: 20px; }
   .bilingual-native { font-size: 30px; }
   .bilingual-ko     { font-size: 18px; }
   .caption          { font-size: 16px; }
 
-  /* ① 언어 선택 */
   .lang-grid { gap: 24px; }
   .lang-btn  { padding: 40px 16px; border-radius: 22px; }
   .lang-flag { font-size: 72px; margin-bottom: 14px; }
   .lang-label { font-size: 20px; }
 
-  /* ② PIN */
   .flag-xl     { font-size: 88px; margin-bottom: 22px; }
   .pin-dots    { gap: 32px; margin: 36px 0 24px; }
   .pin-dot     { width: 36px; height: 36px; }
@@ -564,13 +605,11 @@ button:not(:disabled):active { transform: scale(.97); }
   .num-key     { padding: 32px 12px; font-size: 38px; border-radius: 18px; }
   .num-key.del { font-size: 28px; }
 
-  /* 버튼 공통 */
   button     { padding: 22px 28px; font-size: 20px; border-radius: 18px; }
   .btn-lg    { padding: 28px 32px; font-size: 24px; }
   .btn-sub   { font-size: 15px; margin-top: 5px; }
   .btn-ghost { font-size: 18px; }
 
-  /* ③ 카메라 준비 */
   .cam-view        { min-height: 460px; border-radius: 22px; }
   .cam-placeholder { min-height: 460px; }
   .cam-icon        { font-size: 72px; }
@@ -585,7 +624,6 @@ button:not(:disabled):active { transform: scale(.97); }
   .pin-badge       { font-size: 18px; padding: 10px 26px; }
   .corner          { width: 28px; height: 28px; }
 
-  /* ④ 스캔 중 */
   .scan-view { height: 480px; border-radius: 22px; }
   .person-head { width: 70px; height: 70px; }
   .person-body { width: 116px; height: 174px; }
@@ -602,7 +640,6 @@ button:not(:disabled):active { transform: scale(.97); }
   .status-ko   { font-size: 15px; }
   .status-tag  { font-size: 15px; padding: 6px 18px; }
 
-  /* ⑤⑥ PASS / FAIL */
   .result-card  { padding: 60px 48px; border-radius: 28px; }
   .result-emoji { font-size: 96px; margin-bottom: 18px; }
   .result-title { font-size: 64px; letter-spacing: 7px; }
@@ -618,7 +655,5 @@ button:not(:disabled):active { transform: scale(.97); }
   .escalation-ko   { font-size: 17px; }
   .auto-reset-bar  { height: 8px; margin: 22px 0 9px; }
   .result-pin-badge { font-size: 17px; padding: 8px 20px; }
-
-  /* 푸터 */
   #footer { padding: 18px; font-size: 15px; }
 }
