@@ -69,10 +69,9 @@ html, body {
 
 /* ── 앱 ──────────────────────────────────────── */
 #app {
-  height: 100dvh;           /* 뷰포트 전체 고정 */
+  min-height: 100dvh;       /* 모바일: 자연스럽게 늘어남 */
   display: flex; flex-direction: column;
   width: 100%;
-  overflow: hidden;
 }
 
 /* ── 헤더 — 어드민 사이드바 그라데이션 동일 ── */
@@ -477,14 +476,18 @@ button:not(:disabled):active { transform: scale(.97); }
 
 /* 태블릿 (600px 이상) */
 @media (min-width: 600px) {
-  html, body { font-size: 18px; }
-  #header { padding: 14px 36px; }
+  html, body { font-size: 18px; overflow: hidden; height: 100%; }
 
   /* ── 태블릿 no-scroll 핵심 구조 ── */
+  #app {
+    height: 100dvh;            /* 태블릿: 뷰포트 고정 */
+    overflow: hidden;
+  }
+  #header { padding: 14px 36px; }
   #main {
     max-width: 700px;
     padding: 16px 28px 16px;
-    overflow: hidden;          /* #main 자체 스크롤 제거 */
+    overflow: hidden;
     display: flex;
     flex-direction: column;
   }
@@ -493,8 +496,11 @@ button:not(:disabled):active { transform: scale(.97); }
     min-height: 0;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;          /* 화면별 필요시만 스크롤 */
+    overflow: hidden;          /* 스크롤 완전 제거 */
   }
+  /* PASS/FAIL 결과 카드 — 내용 길면 카드 내부만 스크롤 허용 */
+  #screen-pass.active,
+  #screen-fail.active { overflow-y: auto; }
   /* 카메라/스캔 뷰가 남은 공간을 채움 */
   #cam-view-box {
     flex: 1;
@@ -558,18 +564,19 @@ button:not(:disabled):active { transform: scale(.97); }
   .status-name { font-size: 16px; }
   .status-ko   { font-size: 13px; }
   .status-tag  { font-size: 13px; padding: 4px 14px; }
-  .result-card  { padding: 44px 36px; border-radius: 20px; }
-  .result-emoji { font-size: 72px; margin-bottom: 14px; }
-  .result-title { font-size: 48px; letter-spacing: 5px; }
-  .result-ppe-info { font-size: 16px; }
-  .tts-box   { padding: 16px 18px; border-radius: 14px; }
-  .tts-msg   { font-size: 17px; }
-  .tts-msg-ko { font-size: 14px; }
-  .guide-list li { font-size: 15px; }
-  .escalation-text { font-size: 18px; }
-  .escalation-ko   { font-size: 14px; }
-  .auto-reset-bar  { height: 6px; margin: 18px 0 7px; }
-  #footer { padding: 14px; font-size: 13px; }
+  .result-card  { padding: 20px 24px; border-radius: 20px; }
+  .result-emoji { font-size: 52px; margin-bottom: 6px; }
+  .result-title { font-size: 42px; letter-spacing: 4px; margin-bottom: 10px; }
+  .result-ppe-info { font-size: 14px; margin-bottom: 6px; }
+  .tts-box   { padding: 12px 14px; border-radius: 12px; margin: 10px 0; }
+  .tts-msg   { font-size: 15px; }
+  .tts-msg-ko { font-size: 13px; }
+  .guide-box  { padding: 10px 14px; margin: 8px 0; }
+  .guide-list li { font-size: 14px; margin-bottom: 4px; }
+  .escalation-text { font-size: 16px; }
+  .escalation-ko   { font-size: 13px; }
+  .auto-reset-bar  { height: 5px; margin: 10px 0 5px; }
+  #footer { padding: 10px; font-size: 12px; }
 }
 
 /* 아이패드 12.9" (min-width: 1024px) */
