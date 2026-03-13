@@ -14,8 +14,8 @@ Node.js 14 이상
 
 1. 저장소 클론
 ```bash
-git clone https://github.com/your-team/connecting-bridge.git
-cd connecting-bridge
+git clone https://github.com/AISG-GUARDIAN/AISG.git
+cd AISG
 ```
 
 2. Backend 설정
