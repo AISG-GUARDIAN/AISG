@@ -11,6 +11,7 @@ const state = {
   stream: null,          // ready 화면 웹캠 스트림
   capturedBase64: null,  // 촬영 시작 시 캡처된 이미지
   autoResetTimer: null,
+  webrtc: null,          // WebRTCClient 인스턴스 (연결 시)
 };
 
 const AUTO_RESET_SEC = 7; // PASS 후 자동 초기화 시간(초)
@@ -206,6 +207,9 @@ async function startCamera() {
     loading.style.display = "none";
     video.style.display   = "block";
 
+    // WebRTC 연결 시도 (백엔드 /ws/signal 준비 시 자동 활성화)
+    _startWebRTC(stream);
+
   } catch (err) {
     loading.style.display = "none";
     errBox.style.display  = "";
@@ -217,6 +221,7 @@ async function startCamera() {
 }
 
 function stopCamera() {
+  _stopWebRTC();
   stopScanStream();
   const video = $("cam-video");
   if (video) { video.srcObject = null; }
@@ -271,7 +276,7 @@ function initReadyScreen() {
 }
 
 $("btn-start-scan").addEventListener("click", () => {
-  // 화면 전환 전에 ready 카메라에서 프레임 캡처
+  // 화면 전환 전에 ready 카메라에서 프레임 캡처 (미리보기 + HTTP fallback용)
   state.capturedBase64 = captureFromReadyCam();
 
   flash();
@@ -280,9 +285,15 @@ $("btn-start-scan").addEventListener("click", () => {
 
   // 캡처된 이미지를 스캔 화면 배경으로 표시
   showCapturedInScanView();
-
   runProgressBar();
-  setTimeout(() => callDetectAPI(), 500);
+
+  // WebRTC 연결 중이면 서버 측 캡처 요청, 아니면 HTTP API fallback
+  if (state.webrtc?.isConnected) {
+    state.webrtc.requestCapture();
+    // 결과는 onResult 콜백 → _handleWebRTCResult() 에서 처리
+  } else {
+    setTimeout(() => callDetectAPI(), 500);
+  }
 });
 
 /* ── 스캔 화면 ───────────────────────────────── */
@@ -312,6 +323,39 @@ function initScanScreen() {
   });
   $("progress-bar").style.width = "0%";
   $("prog-pct").textContent = "0%";
+}
+
+/* ── WebRTC 헬퍼 ─────────────────────────────── */
+function _startWebRTC(stream) {
+  if (typeof WebRTCClient === "undefined") return; // webrtc.js 미로드 시 무시
+  _stopWebRTC();
+  state.webrtc = new WebRTCClient({
+    onResult: _handleWebRTCResult,
+    onStateChange: (s) => console.log("[WebRTC]", s),
+  });
+  state.webrtc.start(stream).then((ok) => {
+    if (!ok) {
+      console.log("[WebRTC] 연결 실패 — HTTP API fallback 사용");
+      state.webrtc = null;
+    }
+  });
+}
+
+function _stopWebRTC() {
+  if (state.webrtc) {
+    state.webrtc.stop();
+    state.webrtc = null;
+  }
+}
+
+// WebRTC 결과 콜백: 서버가 DataChannel / WebSocket으로 감지 결과 전송 시 호출
+function _handleWebRTCResult({ helmetOk, vestOk }) {
+  stopScanStream();
+  detectItem("helmet", helmetOk);
+  delay(400).then(() => {
+    detectItem("vest", vestOk);
+    return delay(600);
+  }).then(() => showResult({ helmetOk, vestOk }));
 }
 
 /* ── 사진 캡처 ───────────────────────────────── */

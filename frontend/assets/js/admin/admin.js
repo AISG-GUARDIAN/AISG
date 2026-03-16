@@ -442,6 +442,7 @@ const titleMap = {
   'checkin':   ['체크인 기록', '작업자 체크인 이력 조회'],
   'daily':     ['일별 데이터', '일별 체크인 현황 분석'],
   'monthly':   ['월별 데이터', '월별 체크인 종합 분석'],
+  'groups':    ['그룹 관리', '작업자 그룹 생성 및 관리'],
   'alarm':     ['시스템 알림', '알림 및 경고 메시지']
 };
 
@@ -455,6 +456,7 @@ function navigate(p) {
   if (p === 'checkin') { curPage = 1; renderCheckinTable(); }
   if (p === 'daily') { renderDailyPage(); }
   if (p === 'monthly') { renderMonthSelector(); }
+  if (p === 'groups') { loadGroups(); }
   if (p === 'alarm') { loadNotifications(); }
 }
 
@@ -802,7 +804,167 @@ async function confirmOverride() {
 }
 
 // ════════════════════════════════════════════════════════════
-// 14. 페이지 로드 진입점
+// 14. 그룹 관리 페이지
+// ════════════════════════════════════════════════════════════
+
+let groupsData = [];
+let editingGroupId = null;  // null = 신규, number = 수정 중
+
+async function loadGroups() {
+  const container = document.getElementById('group-list-container');
+  container.innerHTML = `
+    <div class="card p-10 text-center">
+      <i class="fas fa-spinner fa-spin text-gray-300 text-4xl mb-4"></i>
+      <p class="text-gray-400 text-sm">그룹 목록을 불러오는 중...</p>
+    </div>`;
+  try {
+    groupsData = await api.getGroups();
+  } catch (err) {
+    console.error('그룹 조회 실패:', err.message);
+    groupsData = [];
+  }
+  renderGroups();
+}
+
+function renderGroups() {
+  const container = document.getElementById('group-list-container');
+  if (groupsData.length === 0) {
+    container.innerHTML = `
+      <div class="card p-10 text-center">
+        <i class="fas fa-layer-group text-gray-200 text-5xl mb-4"></i>
+        <h4 class="text-base font-bold text-gray-500">그룹이 없습니다</h4>
+        <p class="text-gray-400 text-xs mt-1">위의 "새 그룹 추가" 버튼을 눌러 첫 그룹을 만들어보세요.</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="card overflow-hidden">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-gray-50 text-gray-400 font-bold uppercase tracking-wider">
+          <tr>
+            <th class="px-6 py-4">그룹명</th>
+            <th class="px-6 py-4 text-center">작업자 수</th>
+            <th class="px-6 py-4">생성일</th>
+            <th class="px-6 py-4 text-right">관리</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          ${groupsData.map(g => `
+            <tr class="trow transition-colors">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-layer-group text-blue-600 text-xs"></i>
+                  </div>
+                  <span class="font-bold text-gray-800">${g.name}</span>
+                </div>
+              </td>
+              <td class="px-6 py-4 text-center">
+                <span class="bg-blue-50 text-blue-700 font-bold text-xs px-2.5 py-1 rounded-full">${g.user_count}명</span>
+              </td>
+              <td class="px-6 py-4 text-gray-400">${(g.created_at || '').split('T')[0]}</td>
+              <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <button onclick="openGroupModal(${g.id}, '${g.name.replace(/'/g, "\\'")}')"
+                    class="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors">
+                    <i class="fas fa-pen mr-1"></i> 수정
+                  </button>
+                  <button onclick="openGroupDeleteModal(${g.id}, '${g.name.replace(/'/g, "\\'")}', ${g.user_count})"
+                    class="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors">
+                    <i class="fas fa-trash mr-1"></i> 삭제
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <div class="p-3 border-t border-gray-50 bg-gray-50/30 text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+        총 ${groupsData.length}개 그룹
+      </div>
+    </div>`;
+}
+
+function openGroupModal(groupId = null, groupName = '') {
+  editingGroupId = groupId;
+  document.getElementById('group-modal-title').innerText = groupId ? '그룹 이름 수정' : '새 그룹 추가';
+  document.getElementById('group-name-input').value = groupName;
+  const modal = document.getElementById('group-modal');
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('group-name-input').focus(), 50);
+}
+
+function closeGroupModal() {
+  editingGroupId = null;
+  document.getElementById('group-modal').style.display = 'none';
+}
+
+async function saveGroup() {
+  const name = document.getElementById('group-name-input').value.trim();
+  if (!name) { document.getElementById('group-name-input').focus(); return; }
+
+  const btn = document.getElementById('group-save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 저장 중...';
+
+  try {
+    if (editingGroupId) {
+      await api.updateGroup(editingGroupId, name);
+    } else {
+      await api.createGroup(name);
+    }
+    closeGroupModal();
+    await loadGroups();
+  } catch (err) {
+    alert('저장 실패: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check mr-1"></i> 저장';
+  }
+}
+
+let deleteTargetGroupId = null;
+
+function openGroupDeleteModal(groupId, groupName, userCount) {
+  deleteTargetGroupId = groupId;
+  document.getElementById('group-delete-msg').innerText =
+    userCount > 0
+      ? `"${groupName}" 그룹을 삭제합니다. 소속 ${userCount}명의 그룹 배정이 해제됩니다.`
+      : `"${groupName}" 그룹을 삭제합니다.`;
+  document.getElementById('group-delete-modal').style.display = 'flex';
+}
+
+function closeGroupDeleteModal() {
+  deleteTargetGroupId = null;
+  document.getElementById('group-delete-modal').style.display = 'none';
+}
+
+async function confirmGroupDelete() {
+  if (!deleteTargetGroupId) return;
+  const btn = document.getElementById('group-delete-confirm-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 삭제 중...';
+  try {
+    await api.deleteGroup(deleteTargetGroupId);
+    closeGroupDeleteModal();
+    await loadGroups();
+  } catch (err) {
+    alert('삭제 실패: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-trash mr-1"></i> 삭제';
+  }
+}
+
+// 엔터키로 그룹 저장
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('group-name-input');
+  if (input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveGroup(); });
+});
+
+// ════════════════════════════════════════════════════════════
+// 15. 페이지 로드 진입점
 // ════════════════════════════════════════════════════════════
 
 window.addEventListener('load', () => {
