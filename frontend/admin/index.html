@@ -1,21 +1,388 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AISG 관리자 로그인</title>
-  <link rel="stylesheet" href="/assets/css/common.css">
-  <link rel="stylesheet" href="/assets/css/admin.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Safe Guardian — 산업 현장 안전 시스템</title>
+ 
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+ 
+  <link rel="stylesheet" href="../assets/css/admin-style.css" />
 </head>
+ 
 <body>
-  <div class="login-wrap">
-    <h1>AISG 관리자</h1>
-    <form id="loginForm">
-      <input type="text" id="username" placeholder="아이디" required>
-      <input type="password" id="password" placeholder="비밀번호" required>
-      <button type="submit">로그인</button>
-    </form>
+  <!-- ══════════════════ 로그인 모달 ══════════════════ -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-logo">
+          <i class="fas fa-shield-halved"></i>
+        </div>
+        <h2>AI Safe Guardian</h2>
+        <p>관리자 로그인</p>
+      </div>
+      <form id="login-form" onsubmit="handleAdminLogin(event)">
+        <div class="login-field">
+          <label for="login-emp-no"><i class="fas fa-id-badge"></i> 사원번호</label>
+          <input type="text" id="login-emp-no" placeholder="사원번호를 입력하세요" required autocomplete="off" />
+        </div>
+        <p id="login-error" class="login-error" style="display:none;"></p>
+        <button type="submit" id="login-btn" class="login-submit">
+          <i class="fas fa-right-to-bracket"></i> 로그인
+        </button>
+      </form>
+      <div class="login-footer">
+        <i class="fas fa-lock"></i> 등록된 관리자 사원번호만 접근 가능합니다
+      </div>
+    </div>
   </div>
-  <script src="/assets/js/auth.js"></script>
+
+  <aside class="sidebar flex flex-col p-4">
+    <div class="flex items-center gap-3 px-2 py-6 border-b border-white/10 mb-6">
+      <div class="w-11 h-11 bg-[#F47C20] rounded-xl flex items-center justify-center shadow-lg">
+        <i class="fas fa-shield-halved text-white text-xl"></i>
+      </div>
+      <div>
+        <h1 class="text-white font-bold text-base leading-tight">AI Safe Guardian</h1>
+        <p class="text-white/40 text-[10px]">산업 현장 안전 시스템</p>
+      </div>
+    </div>
+ 
+    <nav class="flex-1 flex flex-col gap-1">
+      <div class="text-white/30 text-[9px] font-bold tracking-widest px-3 mb-2">메인 메뉴</div>
+      <button onclick="navigate('dashboard')" id="nav-dashboard" class="nav-item active">
+        <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
+        <span class="flex-1 text-left font-medium">실시간 대시보드</span>
+      </button>
+      <button onclick="navigate('checkin')" id="nav-checkin" class="nav-item">
+        <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+        <span class="flex-1 text-left font-medium">체크인 기록</span>
+      </button>
+ 
+      <div class="text-white/30 text-[9px] font-bold tracking-widest px-3 mt-6 mb-2">데이터 분석</div>
+      <button onclick="navigate('daily')" id="nav-daily" class="nav-item">
+        <span class="nav-icon"><i class="fas fa-calendar-day"></i></span>
+        <span class="flex-1 text-left font-medium">일별 데이터</span>
+      </button>
+      <button onclick="navigate('monthly')" id="nav-monthly" class="nav-item">
+        <span class="nav-icon"><i class="fas fa-calendar-alt"></i></span>
+        <span class="flex-1 text-left font-medium">월별 데이터</span>
+      </button>
+ 
+      <div class="text-white/30 text-[9px] font-bold tracking-widest px-3 mt-6 mb-2">시스템</div>
+      <button onclick="navigate('alarm')" id="nav-alarm" class="nav-item group relative">
+        <span class="nav-icon"><i class="fas fa-bell"></i></span>
+        <span class="flex-1 text-left font-medium">알림</span>
+        <span id="fail-badge" class="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] flex items-center justify-center shadow-sm hidden">
+          0
+        </span>
+      </button>
+    </nav>
+ 
+    <div class="mt-auto bg-white/10 border border-white/10 rounded-xl p-3 flex items-center gap-3">
+      <div class="w-9 h-9 bg-[#F47C20] rounded-lg flex items-center justify-center text-white font-bold">관</div>
+      <div class="flex-1 overflow-hidden">
+        <p class="text-white text-xs font-bold truncate">관리자</p>
+        <p class="text-white/40 text-[10px]">슈퍼 관리자</p>
+      </div>
+      <i class="fas fa-right-from-bracket text-white/30 text-xs cursor-pointer" onclick="handleAdminLogout()" title="로그아웃"></i>
+    </div>
+  </aside>
+ 
+  <div class="flex-1 flex flex-col min-w-0">
+    <header class="bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center shadow-sm z-10">
+      <div>
+        <h2 id="page-title" class="text-lg font-bold text-gray-800">실시간 대시보드</h2>
+        <p id="page-subtitle" class="text-[11px] text-gray-400">실시간 안전 모니터링 — 30초마다 자동 갱신</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-xl border border-green-100">
+          <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          <span class="text-green-600 text-[11px] font-bold">실시간 연결됨</span>
+        </div>
+        <div class="flex items-center gap-3 bg-gray-50 border border-gray-200 px-4 py-1.5 rounded-xl text-xs font-bold text-gray-700">
+          <i class="far fa-calendar text-gray-400"></i>
+          <span id="clock">13:04:38</span>
+        </div>
+      </div>
+    </header>
+ 
+    <main class="flex-1 overflow-y-auto p-6">
+      <!-- ══════════════════ 대시보드 섹션 ══════════════════ -->
+      <section id="section-dashboard" class="section active">
+        <div class="grid grid-cols-4 gap-4">
+          <div class="card kpi-card p-5">
+            <div class="flex justify-between mb-4">
+              <div><p class="text-[11px] text-gray-500 font-medium">안전 확인율</p><h3 id="kpi-safety-rate" class="text-2xl font-black text-gray-800">--%</h3></div>
+              <div class="w-11 h-11 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg"><i class="fas fa-chart-line"></i></div>
+            </div>
+            <p id="kpi-safety-trend" class="text-[10px] text-green-600 font-bold mb-2">↑ 어제 대비 --</p>
+            <div class="h-1 bg-gray-100 rounded-full overflow-hidden"><div id="kpi-safety-bar" class="h-full bg-blue-600 rounded-full" style="width: 0%"></div></div>
+          </div>
+          <div class="card kpi-card p-5">
+            <div class="flex justify-between mb-4">
+              <div><p class="text-[11px] text-gray-500 font-medium">총 통과 건수</p><h3 id="kpi-total-pass" class="text-2xl font-black text-gray-800">--</h3></div>
+              <div class="w-11 h-11 bg-green-50 text-green-600 rounded-xl flex items-center justify-center text-lg"><i class="fas fa-circle-check"></i></div>
+            </div>
+            <p id="kpi-pass-trend" class="text-[10px] text-green-600 font-bold mb-2">↑ 지난 1시간 --건</p>
+            <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div id="kpi-pass-bar" class="h-full bg-green-500 rounded-full" style="width: 0%"></div>
+          </div>
+        </div>
+          <div class="card kpi-card p-5">
+            <div class="flex justify-between mb-4">
+              <div><p class="text-[11px] text-gray-500 font-medium">실패 건수</p><h3 id="kpi-total-fail" class="text-2xl font-black text-red-600">--</h3></div>
+              <div class="w-11 h-11 bg-red-50 text-red-600 rounded-xl flex items-center justify-center text-lg"><i class="fas fa-circle-xmark"></i></div>
+            </div>
+            
+            <p id="kpi-fail-trend" class="text-[10px] text-red-500 font-bold mb-2">↗ 지난 1시간 --건</p>
+            <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
+              <div id="kpi-fail-bar" class="h-full bg-red-600 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="card kpi-card p-5">
+            <div class="flex justify-between mb-4">
+              <div><p class="text-[11px] text-gray-500 font-medium">검토 대기</p><h3 id="kpi-pending" class="text-2xl font-black text-gray-800">--</h3></div>
+              <div class="w-11 h-11 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center text-lg"><i class="fas fa-clock"></i></div>
+            </div>
+            <p id="kpi-pending-trend" class="text-[10px] text-orange-500 font-bold mb-2">↗ 긴급 --건</p>
+            <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
+              <div id="kpi-pending-bar" class="h-full bg-orange-500 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+
+
+          </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-[310px_1fr_310px] gap-[18px] items-stretch">
+          <div class="card" style="padding:20px; display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+              <div>
+                <div style="font-size:15px; font-weight:700; color:#111827;">언어별 분포</div>
+                <div style="font-size:11px; color:#9CA3AF; margin-top:2px;">국적별 작업자 현황</div>
+              </div>
+              <div style="background:#EBF2FF; color:#1A56A0; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:600;">오늘</div>
+            </div>
+            <div style="position:relative; height:190px; display:flex; align-items:center; justify-content:center;">
+              <canvas id="donutChart"></canvas>
+              <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none;">
+                <div style="font-size:19px; font-weight:700; color:#111827; line-height:1;">100%</div>
+                <div style="font-size:9px; color:#9CA3AF; margin-top:2px;">전체 현황</div>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+              <!-- JS renderLanguageDonut()에서 동적으로 채워짐 -->
+            </div>
+          </div>
+ 
+          <!-- ═══ 시간대별 체크인 현황 및 PASS/FAIL 비율 ═══ -->
+          <div class="card p-5 flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="text-sm font-bold text-gray-800">시간대별 체크인 현황 및 PASS/FAIL 비율</h4>
+                <p class="text-[10px] text-gray-400 mt-0.5">시간대별 통과·실패 추이를 확인하세요</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="switchChartView('all')" id="chart-btn-all" class="toggle-btn pass-active" style="background:#EBF2FF; color:#1A56A0; border-color:#1A56A0;">전체</button>
+                <button onclick="switchChartView('pass')" id="chart-btn-pass" class="toggle-btn inactive">PASS</button>
+                <button onclick="switchChartView('fail')" id="chart-btn-fail" class="toggle-btn inactive">FAIL</button>
+              </div>
+            </div>
+            <div class="flex-1" style="position:relative; min-height:220px;">
+              <canvas id="timeBarChart"></canvas>
+            </div>
+            <div class="mt-4 bg-gray-50 rounded-xl p-3 flex justify-between text-[11px] font-bold">
+              <span class="text-gray-500">오늘 합계: <span id="total-summary-count" class="text-gray-800">--건</span></span>
+              <span id="total-summary-rate" class="text-blue-700">--% PASS</span>
+            </div>
+          </div>
+
+          <!-- ═══ 언어별 FAIL 비율 (신규 추가) ═══ -->
+          <div class="card p-5 flex flex-col">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+              <div>
+                <h4 class="text-sm font-bold text-red-600">언어별 FAIL 비율</h4>
+                <div style="font-size:11px; color:#9CA3AF; margin-top:2px;">국적별 실패 분포 현황</div>
+              </div>
+              <div style="background:#FEF2F2; color:#DC2626; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:600;">총 --건</div>
+            </div>
+            <div style="position:relative; height:200px; display:flex; align-items:center; justify-content:center;">
+              <canvas id="failDonutChart"></canvas>
+              <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none;">
+                <div style="font-size:16px; font-weight:700; color:#DC2626; line-height:1;">FAIL</div>
+                <div style="font-size:9px; color:#9CA3AF; margin-top:2px;">--건</div>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:7px; margin-top:10px;">
+              <!-- JS renderFailDonut()에서 동적으로 채워짐 -->
+            </div>
+          </div>
+        </div>
+ 
+        <!-- ═══ 국적별 체크인 인원 현황 (신규) ═══ -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h4 class="text-sm font-bold text-gray-800">국적별 체크인 인원 현황</h4>
+              <p class="text-[10px] text-gray-400 mt-0.5">오늘 체크인한 작업자 수를 국적별로 표시합니다</p>
+            </div>
+            <div style="background:#EBF2FF; color:#1A56A0; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:600;">오늘 기준</div>
+          </div>
+          <div class="grid grid-cols-6 gap-3" id="nation-stats-container">
+            <!-- JS로 채워짐 -->
+          </div>
+        </div>
+      </section>
+ 
+      <!-- ══════════════════ 체크인 기록 섹션 ══════════════════ -->
+      <section id="section-checkin" class="section">
+        <div class="card overflow-hidden">
+          <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white">
+            <div>
+              <h4 class="text-sm font-bold text-gray-800">전체 체크인 기록</h4>
+              <p class="text-[10px] text-gray-400 mt-0.5">작업자 체크인 이력 조회 (한 페이지 8명)</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="bg-gray-100 p-1 rounded-xl flex gap-1">
+                <button onclick="setFilter('ALL')" id="filter-ALL-hist" class="filter-btn active">전체</button>
+                <button onclick="setFilter('PASS')" id="filter-PASS-hist" class="filter-btn">통과</button>
+                <button onclick="setFilter('FAIL')" id="filter-FAIL-hist" class="filter-btn">실패</button>
+              </div>
+              <button class="bg-blue-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors">
+                <i class="fas fa-download mr-1.5"></i> 내보내기 (CSV)
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-gray-50 text-gray-400 font-bold uppercase tracking-wider">
+                <tr>
+                  <th class="px-6 py-4">체크인 ID</th>
+                  <th class="px-6 py-4">작업자 국적 및 언어</th>
+                  <th class="px-6 py-4">일시</th>
+                  <th class="px-6 py-4">최종 상태</th>
+                </tr>
+              </thead>
+              <tbody id="checkin-table-body" class="divide-y divide-gray-50"></tbody>
+            </table>
+          </div>
+          <div class="p-4 border-t border-gray-50 flex justify-between items-center bg-gray-50/30">
+            <span id="pagination-info" class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter"></span>
+            <div id="pagination-btns" class="flex gap-1"></div>
+          </div>
+        </div>
+      </section>
+ 
+      <!-- ══════════════════ 일별 데이터 섹션 (신규) ══════════════════ -->
+      <section id="section-daily" class="section">
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h4 class="text-lg font-bold text-gray-800" id="daily-title">2026년 3월 일별 데이터</h4>
+              <p class="text-[11px] text-gray-400 mt-0.5">일별 체크인 현황 및 PASS/FAIL 추이</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="changeDailyMonth(-1)" id="daily-prev-btn" class="daily-nav-btn"><i class="fas fa-chevron-left mr-2"></i>이전 달</button>
+              <button onclick="changeDailyMonth(1)" id="daily-next-btn" class="daily-nav-btn" disabled>다음 달 <i class="fas fa-chevron-right ml-2"></i></button>
+            </div>
+          </div>
+          <!-- KPI 요약 -->
+          <div class="grid grid-cols-4 gap-4 mb-6" id="daily-kpi-row">
+          </div>
+          <!-- 일별 바 차트 -->
+          <div style="height:300px; position:relative;" class="mb-6">
+            <canvas id="dailyBarChart"></canvas>
+          </div>
+          <!-- 일별 국적별 테이블 -->
+          <div>
+            <h5 class="text-sm font-bold text-gray-700 mb-3">국적별 일별 체크인 수</h5>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs" id="daily-nation-table">
+                <thead class="bg-gray-50 text-gray-400 font-bold uppercase tracking-wider">
+                  <tr id="daily-nation-thead"></tr>
+                </thead>
+                <tbody id="daily-nation-tbody" class="divide-y divide-gray-50"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+ 
+      <!-- ══════════════════ 월별 데이터 섹션 (신규) ══════════════════ -->
+      <section id="section-monthly" class="section">
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h4 class="text-lg font-bold text-gray-800">2026년 월별 데이터</h4>
+              <p class="text-[11px] text-gray-400 mt-0.5">월을 선택하여 해당 월의 종합 데이터를 확인하세요</p>
+            </div>
+            <div style="background:#EBF2FF; color:#1A56A0; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:700;">2026년</div>
+          </div>
+          <!-- 월 선택 그리드 -->
+          <div class="grid grid-cols-6 gap-3 mb-6" id="month-selector">
+          </div>
+          <!-- 월별 데이터 표시 영역 -->
+          <div id="monthly-data-area">
+            <div class="text-center py-10 text-gray-400">
+              <i class="fas fa-hand-pointer text-4xl mb-3 text-gray-300"></i>
+              <p class="text-sm font-bold">위에서 월을 선택해주세요</p>
+            </div>
+          </div>
+        </div>
+      </section>
+ 
+      <!-- ══════════════════ 알림 섹션 ══════════════════ -->
+      <section id="section-alarm" class="section">
+        <!-- 필터 바 -->
+        <div class="card p-4 mb-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-sm font-bold text-gray-800">3회 실패 — 관리자 호출 알림</h4>
+              <p class="text-[10px] text-gray-400 mt-0.5">작업자가 3회 모두 실패하여 관리자 확인이 필요한 건</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="bg-gray-100 p-1 rounded-xl flex gap-1">
+                <button onclick="filterNotifications('all')" id="noti-filter-all" class="filter-btn active">전체</button>
+                <button onclick="filterNotifications('pending')" id="noti-filter-pending" class="filter-btn">미처리</button>
+                <button onclick="filterNotifications('resolved')" id="noti-filter-resolved" class="filter-btn">처리완료</button>
+              </div>
+              <button onclick="loadNotifications()" class="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-xl text-xs font-bold text-gray-600 transition-colors">
+                <i class="fas fa-arrows-rotate"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- 알림 목록 -->
+        <div id="notification-list">
+          <div class="card p-10 text-center">
+            <i class="fas fa-spinner fa-spin text-gray-300 text-4xl mb-4"></i>
+            <p class="text-gray-400 text-sm">알림을 불러오는 중...</p>
+          </div>
+        </div>
+        <!-- 오버라이드 모달 -->
+        <div id="override-modal" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; display:none; align-items:center; justify-content:center;">
+          <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h4 class="text-base font-bold text-gray-800 mb-1">PASS 처리 확인</h4>
+            <p class="text-xs text-gray-400 mb-4">해당 작업자의 안전 점검을 수동으로 통과 처리합니다.</p>
+            <div id="override-modal-info" class="bg-gray-50 rounded-xl p-3 mb-4 text-xs text-gray-600"></div>
+            <label class="text-xs font-bold text-gray-700 mb-1 block">통과 사유 (선택)</label>
+            <textarea id="override-reason" rows="2" class="w-full border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" placeholder="예: 현장 확인 완료, 장비 정상 착용 확인"></textarea>
+            <div class="flex gap-3 mt-4">
+              <button onclick="closeOverrideModal()" class="flex-1 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors">취소</button>
+              <button onclick="confirmOverride()" id="override-confirm-btn" class="flex-1 py-2.5 rounded-xl bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition-colors">
+                <i class="fas fa-check mr-1"></i> PASS 처리
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+ 
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/admin/admin.js"></script>
 </body>
 </html>

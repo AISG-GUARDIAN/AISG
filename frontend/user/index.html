@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Safe Guardian — Worker Check-In</title>
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
   <!-- 플래시 오버레이 -->
@@ -38,9 +40,9 @@
 
       <!-- ② PIN 입력 -->
       <section id="screen-pin" class="screen">
-        <div id="pin-flag" class="flag-xl"></div>
+        <div id="pin-flag" class="flag-xl" style="display:none"></div>
         <p id="pin-prompt-native" class="bilingual-native"></p>
-        <p id="pin-prompt-ko"     class="bilingual-ko"></p>
+        <p id="pin-prompt-ko" class="bilingual-ko"></p>
 
         <div id="pin-dots" class="pin-dots"></div>
 
@@ -56,14 +58,15 @@
           <button id="btn-back-pin" class="btn-outline">← 뒤로</button>
           <button id="btn-confirm-pin" class="btn-primary" disabled>0 / 4 자리 입력 중</button>
         </div>
-        <p class="caption" style="margin-top:10px">입력 정보는 저장되지 않습니다</p>
+        <p class="caption" style="margin-top:20px">입력 정보는 저장되지 않습니다</p>
+        <a id="link-emp-login" href="#" class="emp-login-link">사원번호가 있으신가요?</a>
       </section>
 
       <!-- ③ 카메라 준비 -->
       <section id="screen-ready" class="screen">
         <div id="ready-badge" class="pin-badge"></div>
-        <p id="ready-greeting-native" class="bilingual-native" style="margin-top:10px"></p>
-        <p id="ready-greeting-ko"     class="bilingual-ko"></p>
+        <p id="ready-greeting-native" class="bilingual-native" style="margin-top:14px"></p>
+        <p id="ready-greeting-ko" class="bilingual-ko"></p>
 
         <div class="cam-view" id="cam-view-box">
           <!-- 카메라 로딩 중 -->
@@ -89,16 +92,16 @@
           <div class="ppe-card">
             <div class="ppe-emoji">⛑️</div>
             <div id="ready-helmet-native" class="ppe-name"></div>
-            <div id="ready-helmet-ko"     class="ppe-name-ko"></div>
-            <div id="ready-wear-native"   class="ppe-check"></div>
-            <div id="ready-wear-ko"       class="ppe-check-ko"></div>
+            <div id="ready-helmet-ko" class="ppe-name-ko"></div>
+            <div id="ready-wear-native" class="ppe-check"></div>
+            <div id="ready-wear-ko" class="ppe-check-ko"></div>
           </div>
           <div class="ppe-card">
             <div class="ppe-emoji">🦺</div>
             <div id="ready-vest-native" class="ppe-name"></div>
-            <div id="ready-vest-ko"     class="ppe-name-ko"></div>
+            <div id="ready-vest-ko" class="ppe-name-ko"></div>
             <div id="ready-wear2-native" class="ppe-check"></div>
-            <div id="ready-wear2-ko"    class="ppe-check-ko"></div>
+            <div id="ready-wear2-ko" class="ppe-check-ko"></div>
           </div>
         </div>
 
@@ -112,11 +115,13 @@
       <section id="screen-scanning" class="screen">
         <div style="text-align:center; margin-bottom:8px">
           <div id="scan-label-native" class="scan-label"></div>
-          <div id="scan-label-ko"     class="scan-label-ko"></div>
+          <div id="scan-label-ko" class="scan-label-ko"></div>
         </div>
 
         <div class="scan-view">
           <div class="scan-bg"></div>
+          <!-- 캡처된 정지 이미지 -->
+          <img id="scan-preview" style="display:none">
           <!-- 실시간 웹캠 피드 -->
           <video id="webcam" autoplay playsinline muted></video>
           <canvas id="overlay"></canvas>
@@ -152,7 +157,7 @@
             <span class="status-icon">⏳</span>
             <div>
               <div id="status-helmet-native" class="status-name"></div>
-              <div id="status-helmet-ko"     class="status-ko"></div>
+              <div id="status-helmet-ko" class="status-ko"></div>
             </div>
             <span class="status-tag">감지중...</span>
           </div>
@@ -160,7 +165,7 @@
             <span class="status-icon">⏳</span>
             <div>
               <div id="status-vest-native" class="status-name"></div>
-              <div id="status-vest-ko"     class="status-ko"></div>
+              <div id="status-vest-ko" class="status-ko"></div>
             </div>
             <span class="status-tag">감지중...</span>
           </div>
@@ -177,7 +182,7 @@
           <div class="tts-box pass-tts">
             <div id="pass-tts-label" class="tts-label pass-tts-label"></div>
             <div id="pass-msg-native" class="tts-msg"></div>
-            <div id="pass-msg-ko"     class="tts-msg-ko"></div>
+            <div id="pass-msg-ko" class="tts-msg-ko"></div>
           </div>
           <!-- 자동 초기화 카운트다운 -->
           <div class="auto-reset-bar">
@@ -201,7 +206,7 @@
           <div class="tts-box fail-tts">
             <div id="fail-tts-label" class="tts-label fail-tts-label"></div>
             <div id="fail-msg-native" class="tts-msg"></div>
-            <div id="fail-msg-ko"     class="tts-msg-ko"></div>
+            <div id="fail-msg-ko" class="tts-msg-ko"></div>
           </div>
 
           <div id="fail-ppe-list" class="ppe-status-list"></div>
@@ -220,7 +225,7 @@
           <!-- 3회 초과 에스컬레이션 -->
           <div id="escalation-box" class="escalation-box" style="display:none">
             <p id="escalation-native" class="escalation-text"></p>
-            <p id="escalation-ko"     class="escalation-ko"></p>
+            <p id="escalation-ko" class="escalation-ko"></p>
             <button id="btn-reset-fail" class="btn-ghost-lg">
               <span id="reset-native"></span>
             </button>
@@ -243,4 +248,5 @@
   <script src="webrtc.js"></script>
   <script src="app.js"></script>
 </body>
+
 </html>

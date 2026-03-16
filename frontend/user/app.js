@@ -8,8 +8,8 @@ const state = {
   lang: "ko",
   pin: "",
   failCount: 0,
-  stream: null,       // ready 화면 웹캠 스트림
-  scanStream: null,   // scan 화면 전용 스트림
+  stream: null,          // ready 화면 웹캠 스트림
+  capturedBase64: null,  // 촬영 시작 시 캡처된 이미지
   autoResetTimer: null,
 };
 
@@ -233,7 +233,9 @@ function stopScanStream() {
   }
   const webcam = $("webcam");
   if (webcam) { webcam.srcObject = null; }
-  $("webcam")?.closest(".scan-view")?.classList.remove("webcam-active");
+  const preview = $("scan-preview");
+  if (preview) { preview.src = ""; preview.style.display = "none"; }
+  document.querySelector(".scan-view")?.classList.remove("webcam-active");
 }
 
 function captureFrame() {
@@ -269,10 +271,18 @@ function initReadyScreen() {
 }
 
 $("btn-start-scan").addEventListener("click", () => {
+  // 화면 전환 전에 ready 카메라에서 프레임 캡처
+  state.capturedBase64 = captureFromReadyCam();
+
   flash();
   initScanScreen();
-  showScreen("screen-scanning");
-  startWebcamAndScan();
+  showScreen("screen-scanning"); // ready 카메라 종료됨
+
+  // 캡처된 이미지를 스캔 화면 배경으로 표시
+  showCapturedInScanView();
+
+  runProgressBar();
+  setTimeout(() => callDetectAPI(), 500);
 });
 
 /* ── 스캔 화면 ───────────────────────────────── */
@@ -288,7 +298,11 @@ function initScanScreen() {
   $("box-helmet-label").textContent = t("helmetName");
   $("box-vest-label").textContent   = t("vestName");
 
-  $("webcam")?.closest(".scan-view")?.classList.remove("webcam-active");
+  // 캡처 이미지 초기화
+  const preview = $("scan-preview");
+  if (preview) { preview.src = ""; preview.style.display = "none"; }
+  document.querySelector(".scan-view")?.classList.remove("webcam-active");
+
   ["box-helmet","box-vest"].forEach((id) => $(id).classList.remove("detected","missing"));
   ["status-helmet","status-vest"].forEach((id) => {
     const el = $(id);
@@ -300,40 +314,25 @@ function initScanScreen() {
   $("prog-pct").textContent = "0%";
 }
 
-/* ── 웹캠 스캔 ───────────────────────────────── */
-async function startWebcamAndScan() {
-  const video = $("webcam");
+/* ── 사진 캡처 ───────────────────────────────── */
+// ready 화면 카메라에서 현재 프레임 → base64
+function captureFromReadyCam() {
+  const video  = $("cam-video");
+  const canvas = $("cam-canvas");
+  if (!video || !video.videoWidth || !canvas) return null;
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
 
-  try {
-    // 스캔 전용 새 스트림 열기
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } },
-      audio: false,
-    });
-    state.scanStream = stream;
-    video.srcObject  = stream;
-    await video.play();
-    video.closest(".scan-view")?.classList.add("webcam-active");
-
-    // 비디오 해상도가 확정되면 캔버스 크기 동기화
-    video.addEventListener("loadedmetadata", () => {
-      const canvas  = $("captureCanvas");
-      const overlay = $("overlay");
-      if (canvas)  { canvas.width  = video.videoWidth; canvas.height  = video.videoHeight; }
-      if (overlay) { overlay.width = video.videoWidth; overlay.height = video.videoHeight; }
-    }, { once: true });
-
-  } catch (err) {
-    console.error("스캔 카메라 실패:", err);
-    // 카메라 없으면 mock 결과
-    runProgressBar();
-    setTimeout(() => showResult({ helmetOk: true, vestOk: true }), 3000);
-    return;
-  }
-
-  runProgressBar();
-  // 1초 후 캡처 (카메라 안정 대기)
-  setTimeout(() => callDetectAPI(), 1000);
+// 스캔 화면 배경에 캡처 이미지 표시
+function showCapturedInScanView() {
+  const preview = $("scan-preview");
+  if (!preview || !state.capturedBase64) return;
+  preview.src = state.capturedBase64;
+  preview.style.display = "block";
+  document.querySelector(".scan-view")?.classList.add("webcam-active");
 }
 
 function runProgressBar() {
@@ -346,20 +345,10 @@ function runProgressBar() {
   }, 120);
 }
 
-function captureFrameBase64() {
-  const video  = $("webcam");
-  const canvas = $("captureCanvas");
-  if (!video || !video.videoWidth || !canvas) return null;
-  canvas.width  = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext("2d").drawImage(video, 0, 0);
-  return canvas.toDataURL("image/jpeg", 0.7);
-}
-
 async function callDetectAPI() {
   try {
-    const base64 = captureFrameBase64();
-    if (!base64) throw new Error("캡처 실패");
+    const base64 = state.capturedBase64;
+    if (!base64) throw new Error("캡처 없음 — mock으로 진행");
 
     const res = await fetch(`${API_BASE}/api/detect/mock`, {
       method: "POST",
@@ -549,6 +538,7 @@ function resetToLang() {
   clearAutoReset();
   state.pin = "";
   state.failCount = 0;
+  state.capturedBase64 = null;
   speechSynthesis?.cancel();
   stopCamera();
   showScreen("screen-lang");
@@ -561,9 +551,8 @@ $("btn-next-worker").addEventListener("click", resetToLang);
 
 $("btn-retry").addEventListener("click", () => {
   flash();
-  initScanScreen();
-  showScreen("screen-scanning");
-  startWebcamAndScan();
+  showScreen("screen-ready");
+  startCamera();
 });
 
 $("btn-reset-fail").addEventListener("click", resetToLang);
