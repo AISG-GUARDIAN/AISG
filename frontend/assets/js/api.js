@@ -127,6 +127,116 @@ const api = {
         return this._adminFetch(`/admin/notifications${qs}`);
     },
 
+    /* ── 그룹 관리 API ── */
+
+    /** 그룹 목록 조회 */
+    async getGroups() {
+        return this._adminFetch("/admin/groups");
+    },
+
+    /** 그룹 생성 */
+    async createGroup(name) {
+        return this._adminFetch("/admin/groups", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name }),
+        });
+    },
+
+    /** 그룹명 수정 */
+    async updateGroup(groupId, name) {
+        return this._adminFetch(`/admin/groups/${groupId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name }),
+        });
+    },
+
+    /** 그룹 삭제 */
+    async deleteGroup(groupId) {
+        const token = this.getAdminToken();
+        if (!token) throw new Error("401: 관리자 인증 토큰 없음");
+
+        const res = await fetch(`${API_BASE}/admin/groups/${groupId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.status === 401) {
+            this.logoutAdmin();
+            throw new Error("401: 세션이 만료되었습니다");
+        }
+        if (!res.ok && res.status !== 204) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+    },
+
+    /** 그룹 소속 작업자 목록 조회 */
+    async getGroupUsers(groupId) {
+        return this._adminFetch(`/admin/groups/${groupId}/users`);
+    },
+
+    /* ── 일용직 관리 API ── */
+
+    /** 일용직 작업자 목록 조회 (체크인 상태 포함) */
+    async getUsers(groupId) {
+        const qs = groupId ? `?group_id=${groupId}` : "";
+        return this._adminFetch(`/admin/users${qs}`);
+    },
+
+    /** 일용직 작업자 그룹 변경 */
+    async updateUser(userId, data) {
+        return this._adminFetch(`/admin/users/${userId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+    },
+
+    /* ── 정규직 관리 API ── */
+
+    /** 정규직 사원 목록 조회 (체크인 상태 포함) */
+    async getEmployees() {
+        return this._adminFetch("/admin/employees");
+    },
+
+    /** 정규직 사원 등록 */
+    async createEmployee(empNo, language, groupId) {
+        return this._adminFetch("/admin/employees", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ emp_no: empNo, language, group_id: groupId || null }),
+        });
+    },
+
+    /** 정규직 사원 수정 (언어, 그룹) */
+    async updateEmployee(employeeId, data) {
+        return this._adminFetch(`/admin/employees/${employeeId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+    },
+
+    /** 정규직 사원 삭제 */
+    async deleteEmployee(employeeId) {
+        const token = this.getAdminToken();
+        if (!token) throw new Error("401: 관리자 인증 토큰 없음");
+        const res = await fetch(`${API_BASE}/admin/employees/${employeeId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.status === 401) {
+            this.logoutAdmin();
+            throw new Error("401: 세션이 만료되었습니다");
+        }
+        if (!res.ok && res.status !== 204) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+    },
+
     /** 서버 헬스체크 */
     async healthCheck() {
         const res = await fetch(`${API_BASE}/api/health`);
@@ -135,20 +245,26 @@ const api = {
 
     /* ── 작업자 API ── */
 
-    async checkin(imageBlob) {
+    /**
+     * 체크인 API — BASE64 이미지를 JSON으로 전송하여 안전물품 판별 결과를 받는다.
+     *
+     * @param {string} base64Image — data:image/jpeg;base64,... 형식의 캡처 이미지
+     * @returns {{ status, helmetOk, vestOk, needsAdmin, attempt, message }}
+     */
+    async checkin(base64Image) {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("401: 인증 토큰 없음");
 
         const role = localStorage.getItem("role") || "user";
         const endpoint = role === "employee" ? "/employee/checkin" : "/user/checkin";
 
-        const form = new FormData();
-        form.append("image", imageBlob, "capture.jpg");
-
         const res = await fetch(`${API_BASE}${endpoint}`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-            body: form,
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ image_base64: base64Image }),
         });
 
         if (!res.ok) {
@@ -158,6 +274,7 @@ const api = {
 
         const data = await res.json();
         return {
+            status: data.status,
             helmetOk: data.helmet_pass,
             vestOk: data.vest_pass,
             needsAdmin: data.needs_admin,

@@ -35,5 +35,5 @@ class Group(Base):
 
     # 관계
     admin = relationship("Admin", back_populates="groups")
-    users = relationship("User", back_populates="group")
-    employees = relationship("Employee", back_populates="group")
+    users = relationship("User", back_populates="group", passive_deletes=True)
+    employees = relationship("Employee", back_populates="group", passive_deletes=True)

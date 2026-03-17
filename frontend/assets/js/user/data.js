@@ -1,16 +1,16 @@
 /* ──────────────────────────────────────────────────
    data.js  — 다국어 텍스트 + 언어 목록
-   지원: Tiếng Việt / 中文 / ខ្មែរ / ภาษาไทย / 한국어 / 영어(other)
-   3열 그리드, 6개 버튼
+   지원: English / Tiếng Việt / 中文 / ខ្មែរ / ภาษาไทย / 한국어
+   3열 그리드, 6개 버튼 (빈 칸 없음)
 ────────────────────────────────────────────────── */
 
 const LANGUAGES = [
-  { code: "vi", flag: "VN", label: "Tiếng Việt" },
-  { code: "zh", flag: "CN", label: "中文" },
-  { code: "km", flag: "KH", label: "ខ្មែរ" },
-  { code: "th", flag: "TH", label: "ภาษาไทย" },
-  { code: "ko", flag: "KR", label: "한국어" },
-  { code: "en", flag: "EN", label: "English" },
+  { code: "en", cc: "us", flag: "🇺🇸", label: "English" },
+  { code: "vi", cc: "vn", flag: "🇻🇳", label: "Tiếng Việt" },
+  { code: "zh", cc: "cn", flag: "🇨🇳", label: "中文" },
+  { code: "km", cc: "kh", flag: "🇰🇭", label: "ខ្មែរ" },
+  { code: "th", cc: "th", flag: "🇹🇭", label: "ภาษาไทย" },
+  { code: "ko", cc: "kr", flag: "🇰🇷", label: "한국어" },
 ];
 
 const T = {

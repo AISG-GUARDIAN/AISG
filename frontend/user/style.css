@@ -393,6 +393,22 @@ button:not(:disabled):active { transform: scale(.97); }
 }
 @keyframes scan-move { 0% { top:0; } 100% { top:100%; } }
 
+/* 얼굴 감지 가이드 메시지 */
+.face-guide-msg {
+  position: absolute;
+  bottom: 12px; left: 0; right: 0;
+  text-align: center;
+  font-size: 16px; font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0,0,0,.7);
+  z-index: 10;
+  padding: 6px 12px;
+  transition: opacity .2s;
+}
+.face-guide-msg.guide-ok { color: #4ade80; }
+.face-guide-msg.guide-warn { color: #facc15; }
+.face-guide-msg.guide-error { color: #f87171; }
+
 /* 진행 바 */
 .progress-wrap   { margin-bottom: 14px; }
 .progress-top    { display: flex; justify-content: space-between; margin-bottom: 5px; }
