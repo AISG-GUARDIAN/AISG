@@ -8,9 +8,10 @@ const state = {
   lang: "ko",
   pin: "",
   failCount: 0,
-  stream: null,        // MediaStream
-  capturedBlob: null,  // 캡처 이미지
+  stream: null,          // ready 화면 웹캠 스트림
+  capturedBase64: null,  // 촬영 시작 시 캡처된 이미지
   autoResetTimer: null,
+  webrtc: null,          // WebRTCClient 인스턴스 (연결 시)
 };
 
 const AUTO_RESET_SEC = 7; // PASS 후 자동 초기화 시간(초)
@@ -39,7 +40,7 @@ function showScreen(id) {
   // body 클래스로 화면별 테마 적용
   document.body.className = SCREEN_BODY_CLASS[id] || "";
 
-  // 카메라 준비 화면 아닐 때 스트림 중지
+  // 카메라 준비 화면 아닐 때 ready 스트림 중지 (scan 스트림은 callDetectAPI 내부에서 정리)
   if (id !== "screen-ready") stopCamera();
 }
 
@@ -205,6 +206,10 @@ async function startCamera() {
     await video.play();
     loading.style.display = "none";
     video.style.display   = "block";
+
+    // WebRTC 연결 시도 (백엔드 /ws/signal 준비 시 자동 활성화)
+    _startWebRTC(stream);
+
   } catch (err) {
     loading.style.display = "none";
     errBox.style.display  = "";
@@ -216,10 +221,26 @@ async function startCamera() {
 }
 
 function stopCamera() {
+  _stopWebRTC();
+  stopScanStream();
+  const video = $("cam-video");
+  if (video) { video.srcObject = null; }
   if (state.stream) {
     state.stream.getTracks().forEach((t) => t.stop());
     state.stream = null;
   }
+}
+
+function stopScanStream() {
+  if (state.scanStream) {
+    state.scanStream.getTracks().forEach((t) => t.stop());
+    state.scanStream = null;
+  }
+  const webcam = $("webcam");
+  if (webcam) { webcam.srcObject = null; }
+  const preview = $("scan-preview");
+  if (preview) { preview.src = ""; preview.style.display = "none"; }
+  document.querySelector(".scan-view")?.classList.remove("webcam-active");
 }
 
 function captureFrame() {
@@ -255,26 +276,25 @@ function initReadyScreen() {
 }
 
 $("btn-start-scan").addEventListener("click", () => {
-  // 카메라 프레임 캡처
-  const canvas = captureFrame();
-  if (!canvas) {
-    // 카메라 없으면 mock으로 진행
-    state.capturedBlob = null;
-    proceedToScan();
-    return;
-  }
-  canvas.toBlob((blob) => {
-    state.capturedBlob = blob;
-    flash();
-    proceedToScan();
-  }, "image/jpeg", 0.92);
-});
+  // 화면 전환 전에 ready 카메라에서 프레임 캡처 (미리보기 + HTTP fallback용)
+  state.capturedBase64 = captureFromReadyCam();
 
-function proceedToScan() {
+  flash();
   initScanScreen();
-  showScreen("screen-scanning"); // stopCamera 호출됨
-  runScanWithAPI();
-}
+  showScreen("screen-scanning"); // ready 카메라 종료됨
+
+  // 캡처된 이미지를 스캔 화면 배경으로 표시
+  showCapturedInScanView();
+  runProgressBar();
+
+  // WebRTC 연결 중이면 서버 측 캡처 요청, 아니면 HTTP API fallback
+  if (state.webrtc?.isConnected) {
+    state.webrtc.requestCapture();
+    // 결과는 onResult 콜백 → _handleWebRTCResult() 에서 처리
+  } else {
+    setTimeout(() => callDetectAPI(), 500);
+  }
+});
 
 /* ── 스캔 화면 ───────────────────────────────── */
 function initScanScreen() {
@@ -289,6 +309,11 @@ function initScanScreen() {
   $("box-helmet-label").textContent = t("helmetName");
   $("box-vest-label").textContent   = t("vestName");
 
+  // 캡처 이미지 초기화
+  const preview = $("scan-preview");
+  if (preview) { preview.src = ""; preview.style.display = "none"; }
+  document.querySelector(".scan-view")?.classList.remove("webcam-active");
+
   ["box-helmet","box-vest"].forEach((id) => $(id).classList.remove("detected","missing"));
   ["status-helmet","status-vest"].forEach((id) => {
     const el = $(id);
@@ -300,41 +325,104 @@ function initScanScreen() {
   $("prog-pct").textContent = "0%";
 }
 
-async function runScanWithAPI() {
-  // 진행바 애니메이션 (API 응답 기다리는 동안)
+/* ── WebRTC 헬퍼 ─────────────────────────────── */
+function _startWebRTC(stream) {
+  if (typeof WebRTCClient === "undefined") return; // webrtc.js 미로드 시 무시
+  _stopWebRTC();
+  state.webrtc = new WebRTCClient({
+    onResult: _handleWebRTCResult,
+    onStateChange: (s) => console.log("[WebRTC]", s),
+  });
+  state.webrtc.start(stream).then((ok) => {
+    if (!ok) {
+      console.log("[WebRTC] 연결 실패 — HTTP API fallback 사용");
+      state.webrtc = null;
+    }
+  });
+}
+
+function _stopWebRTC() {
+  if (state.webrtc) {
+    state.webrtc.stop();
+    state.webrtc = null;
+  }
+}
+
+// WebRTC 결과 콜백: 서버가 DataChannel / WebSocket으로 감지 결과 전송 시 호출
+function _handleWebRTCResult({ helmetOk, vestOk }) {
+  stopScanStream();
+  detectItem("helmet", helmetOk);
+  delay(400).then(() => {
+    detectItem("vest", vestOk);
+    return delay(600);
+  }).then(() => showResult({ helmetOk, vestOk }));
+}
+
+/* ── 사진 캡처 ───────────────────────────────── */
+// ready 화면 카메라에서 현재 프레임 → base64
+function captureFromReadyCam() {
+  const video  = $("cam-video");
+  const canvas = $("cam-canvas");
+  if (!video || !video.videoWidth || !canvas) return null;
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
+
+// 스캔 화면 배경에 캡처 이미지 표시
+function showCapturedInScanView() {
+  const preview = $("scan-preview");
+  if (!preview || !state.capturedBase64) return;
+  preview.src = state.capturedBase64;
+  preview.style.display = "block";
+  document.querySelector(".scan-view")?.classList.add("webcam-active");
+}
+
+function runProgressBar() {
   let progress = 0;
   const timer = setInterval(() => {
-    progress = Math.min(progress + Math.random() * 6 + 2, 90); // API 전엔 90%까지만
+    progress += Math.random() * 8 + 3;
+    if (progress >= 100) { progress = 100; clearInterval(timer); }
     $("progress-bar").style.width = progress + "%";
     $("prog-pct").textContent = Math.round(progress) + "%";
   }, 120);
+}
 
+async function callDetectAPI() {
   try {
-    let result;
-    if (state.capturedBlob) {
-      // 실제 API 호출
-      result = await callCheckinAPI(state.capturedBlob);
+    const base64 = state.capturedBase64;
+    if (!base64) throw new Error("캡처 없음 — mock으로 진행");
+
+    const res = await fetch(`${API_BASE}/api/detect/mock`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64, timestamp: Date.now() }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    // detections 배열 형식 (Azure Custom Vision 호환)
+    let helmetOk, vestOk;
+    if (Array.isArray(data.detections)) {
+      helmetOk = data.detections.some((d) => d.tag === "helmet"       && d.probability >= 0.7);
+      vestOk   = data.detections.some((d) => d.tag === "safety_vest"  && d.probability >= 0.7);
     } else {
-      // 카메라 없음 → mock
-      await delay(2500);
-      result = { helmetOk: true, vestOk: true };
+      // 직접 helmetOk/vestOk 응답도 지원
+      helmetOk = data.helmetOk ?? data.passed ?? true;
+      vestOk   = data.vestOk   ?? data.passed ?? true;
     }
 
-    clearInterval(timer);
-    $("progress-bar").style.width = "100%";
-    $("prog-pct").textContent = "100%";
-
-    // 감지 결과 박스 표시
-    detectItem("helmet", result.helmetOk ?? true);
+    stopScanStream();
+    detectItem("helmet", helmetOk);
     await delay(400);
-    detectItem("vest", result.vestOk ?? true);
+    detectItem("vest", vestOk);
     await delay(600);
+    showResult({ helmetOk, vestOk });
 
-    showResult(result);
   } catch (err) {
-    clearInterval(timer);
-    console.error("API 오류:", err);
-    // API 실패 시 mock 결과
+    console.error("감지 API 오류:", err);
+    stopScanStream();
     detectItem("helmet", true);
     await delay(400);
     detectItem("vest", true);
@@ -494,7 +582,7 @@ function resetToLang() {
   clearAutoReset();
   state.pin = "";
   state.failCount = 0;
-  state.capturedBlob = null;
+  state.capturedBase64 = null;
   speechSynthesis?.cancel();
   stopCamera();
   showScreen("screen-lang");
@@ -506,8 +594,7 @@ $("btn-reset").addEventListener("click", resetToLang);
 $("btn-next-worker").addEventListener("click", resetToLang);
 
 $("btn-retry").addEventListener("click", () => {
-  // 카메라 다시 시작 → 준비 화면으로
-  initReadyScreen();
+  flash();
   showScreen("screen-ready");
   startCamera();
 });
