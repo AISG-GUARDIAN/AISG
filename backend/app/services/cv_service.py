@@ -1,66 +1,172 @@
 """
 컴퓨터 비전 서비스.
-Azure AI Vision API를 호출하여 안전모/안전조끼 착용 여부를 판별한다.
-개별 항목(helmet/vest) 각각의 pass/fail과 전체 신뢰도를 반환한다.
+
+3단계 파이프라인으로 안전물품 착용 여부를 판별한다:
+1. Azure Face API — 정면 얼굴 감지
+2. Pillow — 얼굴 영역 모자이크 처리 (개인정보 보호)
+3. Azure Custom Vision — 안전모/안전조끼 착용 판별
+
+이미지는 메모리에서만 처리하며 원본·모자이크 모두 저장하지 않는다.
 """
 
+import io
 import logging
 
-from azure.ai.vision.imageanalysis import ImageAnalysisClient
-from azure.ai.vision.imageanalysis.models import VisualFeatures
-from azure.core.credentials import AzureKeyCredential
+import httpx
+from PIL import Image, ImageFilter
+from azure.cognitiveservices.vision.face import FaceClient
+from azure.cognitiveservices.vision.face.models import FaceAttributeType
+from msrest.authentication import CognitiveServicesCredentials
 
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-# 안전모 관련 키워드
-HELMET_KEYWORDS = [
-    "hard hat", "helmet", "safety helmet", "construction helmet",
-    "protective helmet", "head protection",
-]
 
-# 안전조끼 관련 키워드
-VEST_KEYWORDS = [
-    "safety vest", "high visibility vest", "reflective vest",
-    "hi-vis vest", "fluorescent vest", "visibility jacket",
-]
+# ---------------------------------------------------------------------------
+# 1단계: Face API — 정면 얼굴 감지
+# ---------------------------------------------------------------------------
 
-
-def _get_vision_client() -> ImageAnalysisClient:
-    """Azure AI Vision 클라이언트를 생성한다."""
+def _get_face_client() -> FaceClient:
+    """Azure Face API 클라이언트를 생성한다."""
     settings = get_settings()
-    return ImageAnalysisClient(
-        endpoint=settings.AZURE_VISION_ENDPOINT,
-        credential=AzureKeyCredential(settings.AZURE_VISION_KEY),
+    return FaceClient(
+        endpoint=settings.AZURE_FACE_API,
+        credentials=CognitiveServicesCredentials(settings.AZURE_FACE_KEY),
     )
 
 
-def analyze_safety_image(image_data: bytes) -> dict:
+def detect_frontal_face(image_data: bytes) -> dict:
     """
-    촬영된 이미지를 Azure AI Vision으로 분석하여 안전모/조끼 착용 여부를 판별한다.
-
-    분석 흐름:
-    1. Azure Vision API에 이미지를 전송하여 캡션과 태그를 추출
-    2. 캡션·태그에서 안전모/조끼 키워드를 각각 매칭
-    3. 항목별 pass/fail과 전체 신뢰도를 반환
+    이미지에서 정면 얼굴을 감지한다.
 
     Args:
         image_data: 이미지 바이너리 데이터
 
     Returns:
         dict: {
-            "helmet_pass": bool — 안전모 착용 여부,
-            "vest_pass": bool — 안전조끼 착용 여부,
-            "cv_confidence": float — AI 신뢰도 (0.0~1.0),
-            "status": "pass" 또는 "fail" — 둘 다 통과해야 pass,
+            "is_frontal": bool — 정면 여부,
+            "face_rect": dict | None — {"left", "top", "width", "height"},
+            "reason": str — 실패 사유 (성공 시 빈 문자열),
         }
     """
     settings = get_settings()
 
-    # Azure Vision 키가 설정되지 않은 경우 — 개발 모드
-    if not settings.AZURE_VISION_KEY:
-        logger.warning("Azure Vision 키 미설정 — 개발 모드(항상 pass)")
+    # Face API 키 미설정 — 개발 모드
+    if not settings.AZURE_FACE_KEY:
+        logger.warning("Azure Face API 키 미설정 — 개발 모드(정면 판정 스킵)")
+        return {"is_frontal": True, "face_rect": None, "reason": ""}
+
+    try:
+        client = _get_face_client()
+        stream = io.BytesIO(image_data)
+
+        # 얼굴 감지 + headPose 속성 요청
+        faces = client.face.detect_with_stream(
+            image=stream,
+            return_face_id=False,
+            return_face_attributes=[FaceAttributeType.head_pose],
+            recognition_model="recognition_04",
+            detection_model="detection_03",
+        )
+
+        if not faces:
+            return {"is_frontal": False, "face_rect": None, "reason": "얼굴이 감지되지 않았습니다"}
+
+        # 첫 번째 얼굴 사용 (1인 촬영 가정)
+        face = faces[0]
+        head_pose = face.face_attributes.head_pose
+
+        # 정면 판정 기준: yaw(좌우) ±20°, pitch(상하) ±20°
+        is_frontal = abs(head_pose.yaw) <= 20 and abs(head_pose.pitch) <= 20
+
+        rect = face.face_rectangle
+        face_rect = {
+            "left": rect.left,
+            "top": rect.top,
+            "width": rect.width,
+            "height": rect.height,
+        }
+
+        if not is_frontal:
+            return {
+                "is_frontal": False,
+                "face_rect": face_rect,
+                "reason": "정면을 바라봐 주세요",
+            }
+
+        return {"is_frontal": True, "face_rect": face_rect, "reason": ""}
+
+    except Exception as e:
+        logger.error(f"Face API 호출 실패: {e}", exc_info=True)
+        return {"is_frontal": False, "face_rect": None, "reason": f"얼굴 감지 오류: {e}"}
+
+
+# ---------------------------------------------------------------------------
+# 2단계: 모자이크 처리 — 개인정보 보호
+# ---------------------------------------------------------------------------
+
+def mosaic_face(image_data: bytes, face_rect: dict) -> bytes:
+    """
+    얼굴 영역을 모자이크(픽셀화) 처리한다.
+
+    Args:
+        image_data: 원본 이미지 바이너리 데이터
+        face_rect: {"left", "top", "width", "height"} — Face API에서 받은 좌표
+
+    Returns:
+        bytes: 모자이크 처리된 이미지 바이너리 (JPEG)
+    """
+    img = Image.open(io.BytesIO(image_data))
+
+    left = face_rect["left"]
+    top = face_rect["top"]
+    right = left + face_rect["width"]
+    bottom = top + face_rect["height"]
+
+    # 얼굴 영역 크롭 → 축소 → 확대 (픽셀화 효과)
+    face_region = img.crop((left, top, right, bottom))
+    small = face_region.resize(
+        (max(1, face_rect["width"] // 10), max(1, face_rect["height"] // 10)),
+        resample=Image.BILINEAR,
+    )
+    mosaic = small.resize(face_region.size, resample=Image.NEAREST)
+
+    img.paste(mosaic, (left, top, right, bottom))
+
+    # JPEG 바이트로 변환
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    return buf.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# 3단계: Custom Vision — 안전물품 판별
+# ---------------------------------------------------------------------------
+
+def analyze_safety_equipment(image_data: bytes) -> dict:
+    """
+    Custom Vision REST API(Object Detection)로 안전모/조끼 착용 여부를 판별한다.
+
+    엔드포인트 형식:
+    POST {ENDPOINT}/customvision/v3.0/Prediction/{PROJECT_ID}/detect/iterations/{PUBLISH_NAME}/image
+
+    Args:
+        image_data: 모자이크 처리된 이미지 바이너리
+
+    Returns:
+        dict: {
+            "helmet_pass": bool,
+            "vest_pass": bool,
+            "cv_confidence": float,
+            "status": "pass" | "fail",
+        }
+    """
+    settings = get_settings()
+
+    # Custom Vision 키 미설정 — 개발 모드
+    if not settings.AZURE_CUSTOM_KEY or not settings.AZURE_CUSTOM_VISION_PROJECT_ID:
+        logger.warning("Azure Custom Vision 키/프로젝트 미설정 — 개발 모드(항상 pass)")
         return {
             "helmet_pass": True,
             "vest_pass": True,
@@ -69,48 +175,141 @@ def analyze_safety_image(image_data: bytes) -> dict:
         }
 
     try:
-        client = _get_vision_client()
+        # Object Detection 엔드포인트 조합
+        base = settings.AZURE_CUSTOM_VISION_ENDPOINT.rstrip("/")
+        project_id = settings.AZURE_CUSTOM_VISION_PROJECT_ID
+        publish_name = settings.AZURE_CUSTOM_VISION_PUBLISH_NAME
+        url = f"{base}/customvision/v3.0/Prediction/{project_id}/detect/iterations/{publish_name}/image"
 
-        # 캡션 + 태그 분석 요청
-        analysis = client.analyze(
-            image_data=image_data,
-            visual_features=[VisualFeatures.CAPTION, VisualFeatures.TAGS],
-        )
+        headers = {
+            "Prediction-Key": settings.AZURE_CUSTOM_KEY,
+            "Content-Type": "application/octet-stream",
+        }
 
-        # 캡션 텍스트 추출
-        caption_text = ""
-        confidence = 0.0
-        if analysis.caption:
-            caption_text = analysis.caption.text.lower()
-            confidence = analysis.caption.confidence
+        response = httpx.post(url, headers=headers, content=image_data, timeout=30.0)
+        response.raise_for_status()
+        result = response.json()
 
-        # 태그 이름 추출
-        tag_names = []
-        if analysis.tags:
-            tag_names = [tag.name.lower() for tag in analysis.tags.values]
+        # 태그별 최고 확률 추출 (Object Detection은 동일 태그로 여러 박스가 나올 수 있음)
+        tag_probs: dict[str, float] = {}
+        for p in result.get("predictions", []):
+            tag = p["tagName"].lower()
+            prob = p["probability"]
+            if prob > tag_probs.get(tag, 0.0):
+                tag_probs[tag] = prob
 
-        # 모든 텍스트를 합쳐서 키워드 매칭
-        all_text = caption_text + " " + " ".join(tag_names)
+        logger.info(f"Custom Vision 결과: {tag_probs}")
 
-        # 안전모/조끼 각각 판정
-        helmet_pass = any(kw in all_text for kw in HELMET_KEYWORDS)
-        vest_pass = any(kw in all_text for kw in VEST_KEYWORDS)
+        # 착용/미착용 태그 비교 판정
+        # hardhat vs no-hardhat: 점수가 높은 쪽 채택, 동점이면 fail
+        hardhat_prob = tag_probs.get("hardhat", 0.0)
+        no_hardhat_prob = tag_probs.get("no-hardhat", 0.0)
+        if hardhat_prob > no_hardhat_prob:
+            helmet_pass = True
+            helmet_conf = hardhat_prob
+        else:
+            # no-hardhat이 같거나 높으면 미착용
+            helmet_pass = False
+            helmet_conf = no_hardhat_prob
 
-        # 둘 다 통과해야 최종 pass
+        # safety vest vs no-safety vest
+        vest_prob = tag_probs.get("safety vest", 0.0)
+        no_vest_prob = tag_probs.get("no-safety vest", 0.0)
+        if vest_prob > no_vest_prob:
+            vest_pass = True
+            vest_conf = vest_prob
+        else:
+            vest_pass = False
+            vest_conf = no_vest_prob
+
+        cv_confidence = round((helmet_conf + vest_conf) / 2, 3)
         status = "pass" if (helmet_pass and vest_pass) else "fail"
+
+        logger.info(
+            f"판정: hardhat={hardhat_prob:.3f} vs no-hardhat={no_hardhat_prob:.3f} → {'착용' if helmet_pass else '미착용'} | "
+            f"vest={vest_prob:.3f} vs no-vest={no_vest_prob:.3f} → {'착용' if vest_pass else '미착용'}"
+        )
 
         return {
             "helmet_pass": helmet_pass,
             "vest_pass": vest_pass,
-            "cv_confidence": round(confidence, 3),
+            "cv_confidence": cv_confidence,
             "status": status,
         }
 
     except Exception as e:
-        logger.error(f"Azure Vision API 호출 실패: {e}")
+        logger.error(f"Custom Vision API 호출 실패: {e}", exc_info=True)
         return {
             "helmet_pass": False,
             "vest_pass": False,
             "cv_confidence": 0.0,
             "status": "fail",
         }
+
+
+# ---------------------------------------------------------------------------
+# 메인 파이프라인
+# ---------------------------------------------------------------------------
+
+def analyze_safety_image(image_data: bytes) -> dict:
+    """
+    3단계 파이프라인으로 안전물품 착용 여부를 판별한다.
+
+    흐름:
+    1. Face API — 정면 얼굴 감지 (실패 시 retry 응답)
+    2. 모자이크 — 얼굴 영역 픽셀화 (개인정보 보호)
+    3. Custom Vision — 안전모/조끼 판별
+
+    Args:
+        image_data: 이미지 바이너리 데이터
+
+    Returns:
+        dict: {
+            "status": "pass" | "fail" | "retry",
+            "helmet_pass": bool | None,
+            "vest_pass": bool | None,
+            "cv_confidence": float,
+            "face_detected": bool,
+            "retry_reason": str — retry 시 사유,
+        }
+    """
+    logger.info(f"[파이프라인] 시작 — 이미지 크기: {len(image_data)} bytes")
+
+    # 1단계: 정면 얼굴 감지
+    face_result = detect_frontal_face(image_data)
+    logger.info(f"[1단계 Face API] 정면={face_result['is_frontal']}, 사유={face_result['reason']}")
+
+    if not face_result["is_frontal"]:
+        return {
+            "status": "retry",
+            "helmet_pass": None,
+            "vest_pass": None,
+            "cv_confidence": 0.0,
+            "face_detected": False,
+            "retry_reason": face_result["reason"],
+        }
+
+    # 2단계: 모자이크 처리 (얼굴 좌표가 있을 때만)
+    if face_result["face_rect"]:
+        processed_image = mosaic_face(image_data, face_result["face_rect"])
+        logger.info(f"[2단계 모자이크] 완료 — 얼굴 영역: {face_result['face_rect']}")
+    else:
+        processed_image = image_data
+        logger.info("[2단계 모자이크] 스킵 — 개발 모드 (face_rect 없음)")
+
+    # 3단계: Custom Vision 판별
+    safety_result = analyze_safety_equipment(processed_image)
+    logger.info(
+        f"[3단계 Custom Vision] helmet={safety_result['helmet_pass']}, "
+        f"vest={safety_result['vest_pass']}, confidence={safety_result['cv_confidence']}, "
+        f"status={safety_result['status']}"
+    )
+
+    return {
+        "status": safety_result["status"],
+        "helmet_pass": safety_result["helmet_pass"],
+        "vest_pass": safety_result["vest_pass"],
+        "cv_confidence": safety_result["cv_confidence"],
+        "face_detected": True,
+        "retry_reason": "",
+    }

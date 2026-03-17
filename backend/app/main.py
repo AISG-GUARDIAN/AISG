@@ -4,8 +4,16 @@ FastAPI 애플리케이션 엔트리포인트.
 """
 
 import logging
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+# 루트 로거 설정 — INFO 레벨 이상 콘솔 출력
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:     %(name)s — %(message)s",
+    stream=sys.stdout,
+)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +24,7 @@ from app.database import Base, engine, SessionLocal
 from app.models import Admin, Employee, Group  # noqa: F401 — Base.metadata에 모델 등록
 from app.routers import auth
 from app.routers.user import checkin, emp_checkin
-from app.routers.admin import groups, users, sessions, stats, notifications
+from app.routers.admin import employees, groups, users, sessions, stats, notifications
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +96,7 @@ app.include_router(checkin.router)
 app.include_router(emp_checkin.router)
 app.include_router(groups.router)
 app.include_router(users.router)
+app.include_router(employees.router)
 app.include_router(sessions.router)
 app.include_router(stats.router)
 app.include_router(notifications.router)

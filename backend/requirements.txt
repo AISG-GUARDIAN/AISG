@@ -16,7 +16,8 @@ bcrypt==4.0.1
 pydantic-settings==2.7.1
 
 # Azure 서비스
-azure-ai-vision-imageanalysis==1.0.0
+azure-cognitiveservices-vision-face==0.6.0
+azure-cognitiveservices-vision-customvision==1.0.0
 azure-storage-blob==12.24.1
 openai==1.59.6
 

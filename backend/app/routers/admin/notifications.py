@@ -80,9 +80,8 @@ def list_notifications(
     else:
         query_date = date.today()
 
-    # 관리자 소속 그룹 ID 목록
-    admin_group_ids = [g.id for g in db.query(Group).filter(Group.admin_id == admin.id).all()]
-    group_map = {g.id: g.name for g in db.query(Group).filter(Group.id.in_(admin_group_ids)).all()}
+    # 모든 그룹 (관리자 누구든 전체 알림 조회 가능)
+    group_map = {g.id: g.name for g in db.query(Group).all()}
 
     # AuditLog에서 admin_call 이벤트 조회
     logs = (
@@ -127,8 +126,8 @@ def list_notifications(
                 group_id = emp.group_id
                 worker_type = "employee"
 
-        # 관리자 소속 그룹 필터
-        if not worker_id or group_id not in admin_group_ids:
+        # 작업자 정보가 없으면 스킵
+        if not worker_id:
             continue
 
         # 상태 필터
