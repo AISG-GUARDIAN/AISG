@@ -41,27 +41,19 @@ def list_sessions(
     else:
         query_date = date.fromisoformat(target_date)
 
-    admin_group_ids = [g.id for g in db.query(Group).filter(Group.admin_id == admin.id).all()]
+    # User 세션 — 관리자는 모든 세션 조회 가능 (그룹 필터는 선택)
+    user_q = db.query(CheckSession).join(User, CheckSession.user_id == User.id).filter(CheckSession.date == query_date)
+    if group_id:
+        user_sessions = user_q.filter(User.group_id == group_id).all()
+    else:
+        user_sessions = user_q.all()
 
-    if group_id is not None and group_id not in admin_group_ids:
-        raise HTTPException(status_code=403, detail="해당 그룹에 접근 권한이 없습니다")
-
-    filter_groups = [group_id] if group_id else admin_group_ids
-
-    # User 세션
-    user_sessions = (
-        db.query(CheckSession)
-        .join(User, CheckSession.user_id == User.id)
-        .filter(User.group_id.in_(filter_groups), CheckSession.date == query_date)
-        .all()
-    )
     # Employee 세션
-    emp_sessions = (
-        db.query(CheckSession)
-        .join(Employee, CheckSession.employee_id == Employee.id)
-        .filter(Employee.group_id.in_(filter_groups), CheckSession.date == query_date)
-        .all()
-    )
+    emp_q = db.query(CheckSession).join(Employee, CheckSession.employee_id == Employee.id).filter(CheckSession.date == query_date)
+    if group_id:
+        emp_sessions = emp_q.filter(Employee.group_id == group_id).all()
+    else:
+        emp_sessions = emp_q.all()
 
     all_sessions = user_sessions + emp_sessions
     all_sessions.sort(key=lambda s: s.checked_at or s.id, reverse=True)
@@ -71,7 +63,7 @@ def list_sessions(
     emp_ids = [s.employee_id for s in all_sessions if s.employee_id]
     users_map = {u.id: u for u in db.query(User).filter(User.id.in_(user_ids)).all()} if user_ids else {}
     emps_map = {e.id: e for e in db.query(Employee).filter(Employee.id.in_(emp_ids)).all()} if emp_ids else {}
-    group_map = {g.id: g.name for g in db.query(Group).filter(Group.id.in_(admin_group_ids)).all()}
+    group_map = {g.id: g.name for g in db.query(Group).all()}
 
     result = []
     for s in all_sessions:
@@ -119,19 +111,16 @@ def override_session(
     if not session:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
 
-    # 권한 확인 — User 또는 Employee의 그룹이 관리자 소속인지 검증
+    # 작업자의 그룹명 조회 (있으면)
     group = None
     if session.user_id:
         user = db.query(User).filter(User.id == session.user_id).first()
-        if user:
-            group = db.query(Group).filter(Group.id == user.group_id, Group.admin_id == admin.id).first()
+        if user and user.group_id:
+            group = db.query(Group).filter(Group.id == user.group_id).first()
     elif session.employee_id:
         emp = db.query(Employee).filter(Employee.id == session.employee_id).first()
-        if emp:
-            group = db.query(Group).filter(Group.id == emp.group_id, Group.admin_id == admin.id).first()
-
-    if not group:
-        raise HTTPException(status_code=403, detail="해당 세션에 접근 권한이 없습니다")
+        if emp and emp.group_id:
+            group = db.query(Group).filter(Group.id == emp.group_id).first()
 
     # 기존 오버라이드가 있으면 업데이트, 없으면 생성
     override = session.override
@@ -169,7 +158,7 @@ def override_session(
     return SessionResponse(
         id=session.id,
         user_id=session.user_id or session.employee_id or 0,
-        group_name=group.name,
+        group_name=group.name if group else "",
         date=session.date,
         attempt_count=session.attempt_count,
         helmet_pass=session.helmet_pass,

@@ -7,27 +7,41 @@ from datetime import date, datetime
 from pydantic import BaseModel, Field
 
 
+class CheckinRequest(BaseModel):
+    """
+    체크인(촬영) 요청.
+    프론트엔드에서 BASE64 인코딩된 이미지를 전송한다.
+
+    Attributes:
+        image_base64: BASE64 인코딩된 이미지 문자열
+    """
+
+    image_base64: str = Field(..., description="BASE64 인코딩된 촬영 이미지")
+
+
 class CheckinResponse(BaseModel):
     """
     체크인(촬영 판정) 응답.
 
     Attributes:
-        session_id: 생성된 세션 ID
-        status: 판정 상태 (pass / fail / pending)
-        attempt_count: 시도 횟수 (1~3)
+        session_id: 생성된 세션 ID (retry 시 None)
+        status: 판정 상태 (pass / fail / retry)
+        attempt_count: 시도 횟수 (1~3, retry 시 현재 횟수 유지)
         helmet_pass: 안전모 착용 여부
         vest_pass: 안전조끼 착용 여부
         cv_confidence: AI 신뢰도 점수
+        face_detected: 정면 얼굴 감지 여부
         message: 사용자에게 표시할 메시지
         needs_admin: 3회 실패로 관리자 호출 필요 여부
     """
 
-    session_id: int
+    session_id: int | None = None
     status: str
     attempt_count: int
-    helmet_pass: bool | None
-    vest_pass: bool | None
-    cv_confidence: float | None
+    helmet_pass: bool | None = None
+    vest_pass: bool | None = None
+    cv_confidence: float | None = None
+    face_detected: bool = True
     message: str
     needs_admin: bool = False
 

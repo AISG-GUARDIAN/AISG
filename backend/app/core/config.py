@@ -16,8 +16,11 @@ class Settings(BaseSettings):
         SECRET_KEY: JWT 서명에 사용되는 비밀키
         ALGORITHM: JWT 서명 알고리즘 (기본 HS256)
         ACCESS_TOKEN_EXPIRE_MINUTES: 액세스 토큰 만료 시간(분)
-        AZURE_VISION_ENDPOINT: Azure AI Vision API 엔드포인트
-        AZURE_VISION_KEY: Azure AI Vision API 키
+        AZURE_CUSTOM_VISION_ENDPOINT: Azure Custom Vision API 엔드포인트
+        AZURE_CUSTOM_KEY: Azure Custom Vision API 키
+        AZURE_FACE_API: Azure Face API 엔드포인트
+        AZURE_FACE_KEY: Azure Face API 키
+        관리자 목록에서 오늘 등록된 작업자만 필터링
         AZURE_BLOB_CONNECTION_STRING: Azure Blob Storage 연결 문자열
         AZURE_BLOB_CONTAINER: Blob 컨테이너 이름
         AZURE_OPENAI_ENDPOINT: Azure OpenAI 엔드포인트
@@ -32,9 +35,13 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8시간
 
-    # Azure AI Vision
-    AZURE_VISION_ENDPOINT: str = ""
-    AZURE_VISION_KEY: str = ""
+    # Azure Custom Vision (Prediction)
+    AZURE_CUSTOM_VISION_ENDPOINT: str = ""
+    AZURE_CUSTOM_KEY: str = ""
+    AZURE_CUSTOM_VISION_PROJECT_ID: str = ""
+    AZURE_CUSTOM_VISION_PUBLISH_NAME: str = "Iteration1"
+    AZURE_FACE_API: str = ""
+    AZURE_FACE_KEY: str = ""
 
     # Azure Blob Storage
     AZURE_BLOB_CONNECTION_STRING: str = ""

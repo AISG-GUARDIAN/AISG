@@ -446,6 +446,7 @@ const titleMap = {
   'daily':     ['일별 데이터', '일별 체크인 현황 분석'],
   'monthly':   ['월별 데이터', '월별 체크인 종합 분석'],
   'groups':    ['그룹 관리', '작업자 그룹 생성 및 관리'],
+  'workers':   ['직원 관리', '정규직 사원 및 일용직 작업자 관리'],
   'alarm':     ['시스템 알림', '알림 및 경고 메시지']
 };
 
@@ -460,6 +461,7 @@ function navigate(p) {
   if (p === 'daily') { renderDailyPage(); }
   if (p === 'monthly') { renderMonthSelector(); }
   if (p === 'groups') { loadGroups(); }
+  if (p === 'workers') { loadWorkers(); }
   if (p === 'alarm') { loadNotifications(); }
 }
 
@@ -826,67 +828,183 @@ async function loadGroups() {
     console.error('그룹 조회 실패:', err.message);
     groupsData = [];
   }
+  updateGroupKpi();
   renderGroups();
 }
+
+/** 그룹 페이지 상단 KPI (총 그룹 수 / 총 작업자 수) 갱신 */
+function updateGroupKpi() {
+  const totalGroups  = groupsData.length;
+  const totalWorkers = groupsData.reduce((sum, g) => sum + (g.user_count || 0), 0);
+
+  const elGroups  = document.getElementById('group-kpi-total');
+  const elWorkers = document.getElementById('group-kpi-workers');
+  if (elGroups)  elGroups.textContent  = totalGroups.toLocaleString();
+  if (elWorkers) elWorkers.textContent = totalWorkers.toLocaleString();
+}
+
+let selectedGroupId = null;
 
 function renderGroups() {
   const container = document.getElementById('group-list-container');
   if (groupsData.length === 0) {
     container.innerHTML = `
-      <div class="card p-10 text-center">
-        <i class="fas fa-layer-group text-gray-200 text-5xl mb-4"></i>
-        <h4 class="text-base font-bold text-gray-500">그룹이 없습니다</h4>
-        <p class="text-gray-400 text-xs mt-1">위의 "새 그룹 추가" 버튼을 눌러 첫 그룹을 만들어보세요.</p>
+      <div class="text-center py-8">
+        <i class="fas fa-layer-group text-gray-200 text-4xl mb-3"></i>
+        <h4 class="text-sm font-bold text-gray-500">그룹이 없습니다</h4>
+        <p class="text-gray-400 text-[10px] mt-1">"새 그룹" 버튼을 눌러 첫 그룹을 만들어보세요.</p>
+      </div>`;
+    renderGroupDetail(null);
+    return;
+  }
+
+  container.innerHTML = groupsData.map(g => `
+    <div class="group-card flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors
+                ${selectedGroupId === g.id ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50 hover:bg-gray-100 border border-transparent'}"
+         onclick="selectGroup(${g.id})">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-8 h-8 ${selectedGroupId === g.id ? 'bg-blue-600' : 'bg-white'} rounded-lg flex items-center justify-center flex-shrink-0">
+          <i class="fas fa-layer-group ${selectedGroupId === g.id ? 'text-white' : 'text-blue-600'} text-xs"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="font-bold text-gray-800 text-xs truncate">${g.name}</div>
+          <div class="text-[10px] text-gray-400">${(g.created_at || '').split('T')[0]}</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <span class="bg-blue-100 text-blue-700 font-bold text-[10px] px-2 py-0.5 rounded-full">${g.user_count}명</span>
+        <button onclick="event.stopPropagation(); openGroupModal(${g.id}, '${g.name.replace(/'/g, "\\'")}')"
+          class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+          title="수정">
+          <i class="fas fa-pen text-[10px]"></i>
+        </button>
+        <button onclick="event.stopPropagation(); openGroupDeleteModal(${g.id}, '${g.name.replace(/'/g, "\\'")}', ${g.user_count})"
+          class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+          title="삭제">
+          <i class="fas fa-trash text-[10px]"></i>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/** 그룹 선택 → 우측 상세 패널에 소속 작업자 표시 */
+async function selectGroup(groupId) {
+  selectedGroupId = groupId;
+  renderGroups(); // 선택 상태 하이라이트 갱신
+
+  const detail = document.getElementById('group-detail-area');
+  const group = groupsData.find(g => g.id === groupId);
+  if (!detail || !group) return;
+
+  detail.innerHTML = `
+    <div class="text-center py-10">
+      <i class="fas fa-spinner fa-spin text-gray-300 text-3xl mb-3"></i>
+      <p class="text-gray-400 text-xs">소속 작업자를 불러오는 중...</p>
+    </div>`;
+
+  try {
+    const data = await api.getGroupUsers(groupId);
+    renderGroupDetail(group, data.employees || [], data.users || []);
+  } catch (err) {
+    console.error('그룹 작업자 조회 실패:', err.message);
+    detail.innerHTML = `
+      <div class="text-center py-10">
+        <i class="fas fa-exclamation-triangle text-red-300 text-3xl mb-3"></i>
+        <p class="text-red-500 text-xs font-bold">조회 실패: ${err.message}</p>
+      </div>`;
+  }
+}
+
+/** 우측 상세 패널 렌더링 */
+function renderGroupDetail(group, employees = [], users = []) {
+  const detail = document.getElementById('group-detail-area');
+  if (!detail) return;
+
+  if (!group) {
+    detail.innerHTML = `
+      <div class="text-center py-16 text-gray-400">
+        <i class="fas fa-arrow-left text-4xl mb-3 text-gray-300"></i>
+        <p class="text-sm font-bold">좌측에서 그룹을 선택해주세요</p>
+        <p class="text-[10px] text-gray-400 mt-1">그룹의 소속 인원 정보를 확인할 수 있습니다</p>
       </div>`;
     return;
   }
 
-  container.innerHTML = `
-    <div class="card overflow-hidden">
-      <table class="w-full text-left text-xs">
-        <thead class="bg-gray-50 text-gray-400 font-bold uppercase tracking-wider">
-          <tr>
-            <th class="px-6 py-4">그룹명</th>
-            <th class="px-6 py-4 text-center">작업자 수</th>
-            <th class="px-6 py-4">생성일</th>
-            <th class="px-6 py-4 text-right">관리</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-50">
-          ${groupsData.map(g => `
-            <tr class="trow transition-colors">
-              <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-layer-group text-blue-600 text-xs"></i>
-                  </div>
-                  <span class="font-bold text-gray-800">${g.name}</span>
-                </div>
-              </td>
-              <td class="px-6 py-4 text-center">
-                <span class="bg-blue-50 text-blue-700 font-bold text-xs px-2.5 py-1 rounded-full">${g.user_count}명</span>
-              </td>
-              <td class="px-6 py-4 text-gray-400">${(g.created_at || '').split('T')[0]}</td>
-              <td class="px-6 py-4 text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <button onclick="openGroupModal(${g.id}, '${g.name.replace(/'/g, "\\'")}')"
-                    class="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors">
-                    <i class="fas fa-pen mr-1"></i> 수정
-                  </button>
-                  <button onclick="openGroupDeleteModal(${g.id}, '${g.name.replace(/'/g, "\\'")}', ${g.user_count})"
-                    class="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors">
-                    <i class="fas fa-trash mr-1"></i> 삭제
-                  </button>
-                </div>
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-      <div class="p-3 border-t border-gray-50 bg-gray-50/30 text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
-        총 ${groupsData.length}개 그룹
+  const totalCount = employees.length + users.length;
+  const langLabels = { ko:'한국어', en:'영어', vi:'베트남어', zh:'중국어', km:'크메르어', th:'태국어', mn:'몽골어', ru:'러시아어', id:'인도네시아어' };
+
+  // 언어별 통계 (정규직 + 일용직 합산)
+  const langCount = {};
+  [...employees, ...users].forEach(m => { langCount[m.language] = (langCount[m.language] || 0) + 1; });
+  const langSummary = Object.entries(langCount)
+    .sort((a, b) => b[1] - a[1])
+    .map(([code, cnt]) => `<span class="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-full">${langLabels[code] || code} ${cnt}</span>`)
+    .join(' ');
+
+  // 정규직 테이블 행
+  const empRows = employees.map(e => `
+    <tr class="hover:bg-gray-50 transition-colors">
+      <td class="px-4 py-3">
+        <span class="bg-indigo-50 text-indigo-600 font-bold text-[9px] px-1.5 py-0.5 rounded">정규</span>
+      </td>
+      <td class="px-4 py-3 font-bold text-gray-700">${e.emp_no}</td>
+      <td class="px-4 py-3">
+        <span class="bg-blue-50 text-blue-700 font-bold text-[10px] px-2 py-0.5 rounded-full">${langLabels[e.language] || e.language}</span>
+      </td>
+      <td class="px-4 py-3 text-gray-400">${(e.created_at || '').split('T')[0]}</td>
+    </tr>`).join('');
+
+  // 일용직 테이블 행
+  const userRows = users.map(u => `
+    <tr class="hover:bg-gray-50 transition-colors">
+      <td class="px-4 py-3">
+        <span class="bg-amber-50 text-amber-600 font-bold text-[9px] px-1.5 py-0.5 rounded">일용</span>
+      </td>
+      <td class="px-4 py-3 font-mono text-gray-700 text-[11px]">${u.system_id}</td>
+      <td class="px-4 py-3">
+        <span class="bg-blue-50 text-blue-700 font-bold text-[10px] px-2 py-0.5 rounded-full">${langLabels[u.language] || u.language}</span>
+      </td>
+      <td class="px-4 py-3 text-gray-400">${(u.created_at || '').split('T')[0]}</td>
+    </tr>`).join('');
+
+  detail.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h4 class="text-sm font-bold text-gray-800"><i class="fas fa-layer-group text-blue-600 mr-1"></i> ${group.name}</h4>
+        <p class="text-[10px] text-gray-400 mt-0.5">정규직 ${employees.length}명 · 일용직 ${users.length}명 · 총 ${totalCount}명</p>
       </div>
-    </div>`;
+      <button onclick="navigate('workers')"
+        class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors">
+        <i class="fas fa-id-badge mr-1"></i> 직원 관리
+      </button>
+    </div>
+
+    ${langSummary ? `<div class="flex flex-wrap gap-1 mb-4">${langSummary}</div>` : ''}
+
+    ${totalCount === 0
+      ? `<div class="text-center py-10 text-gray-400">
+           <i class="fas fa-user-slash text-3xl mb-3 text-gray-300"></i>
+           <p class="text-xs font-bold">소속 인원이 없습니다</p>
+         </div>`
+      : `<div class="overflow-hidden rounded-xl border border-gray-100">
+           <div class="overflow-y-auto" style="max-height:400px">
+           <table class="w-full text-left text-xs">
+             <thead class="bg-gray-50 text-gray-400 font-bold uppercase tracking-wider sticky top-0">
+               <tr>
+                 <th class="px-4 py-3">구분</th>
+                 <th class="px-4 py-3">ID</th>
+                 <th class="px-4 py-3">언어</th>
+                 <th class="px-4 py-3">등록일</th>
+               </tr>
+             </thead>
+             <tbody class="divide-y divide-gray-50">
+               ${empRows}${userRows}
+             </tbody>
+           </table>
+           </div>
+         </div>`
+    }`;
 }
 
 function openGroupModal(groupId = null, groupName = '') {
@@ -918,7 +1036,9 @@ async function saveGroup() {
       await api.createGroup(name);
     }
     closeGroupModal();
+    selectedGroupId = null;
     await loadGroups();
+    renderGroupDetail(null);
   } catch (err) {
     alert('저장 실패: ' + err.message);
   } finally {
@@ -951,7 +1071,9 @@ async function confirmGroupDelete() {
   try {
     await api.deleteGroup(deleteTargetGroupId);
     closeGroupDeleteModal();
+    selectedGroupId = null;
     await loadGroups();
+    renderGroupDetail(null);
   } catch (err) {
     alert('삭제 실패: ' + err.message);
   } finally {
@@ -967,7 +1089,257 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ════════════════════════════════════════════════════════════
-// 15. 페이지 로드 진입점
+// 15. 직원 관리 페이지
+// ════════════════════════════════════════════════════════════
+
+let currentWorkerTab = 'employees';
+let workersEmployeeData = [];
+let workersUserData = [];
+
+const LANG_LABELS = {
+  ko:'한국어', en:'영어', vi:'베트남어', zh:'중국어',
+  km:'크메르어', th:'태국어', mn:'몽골어', ru:'러시아어', id:'인도네시아어'
+};
+
+function switchWorkerTab(tab) {
+  currentWorkerTab = tab;
+  document.getElementById('worker-tab-employees').classList.toggle('active', tab === 'employees');
+  document.getElementById('worker-tab-users').classList.toggle('active', tab === 'users');
+
+  // 사원 등록 버튼은 정규직 탭에서만 표시
+  const addBtn = document.getElementById('btn-add-employee');
+  if (addBtn) addBtn.style.display = tab === 'employees' ? '' : 'none';
+
+  loadWorkers();
+}
+
+async function loadWorkers() {
+  const container = document.getElementById('workers-table-container');
+  container.innerHTML = `
+    <div class="text-center py-10 text-gray-400">
+      <i class="fas fa-spinner fa-spin text-3xl mb-3 text-gray-300"></i>
+      <p class="text-xs">불러오는 중...</p>
+    </div>`;
+
+  try {
+    // 그룹 드롭다운용 데이터 확보
+    if (!groupsData || groupsData.length === 0) {
+      try { groupsData = await api.getGroups(); } catch {}
+    }
+
+    if (currentWorkerTab === 'employees') {
+      workersEmployeeData = await api.getEmployees();
+      renderEmployeeTable();
+    } else {
+      workersUserData = await api.getUsers();
+      renderUserTable();
+    }
+  } catch (err) {
+    console.error('직원 목록 조회 실패:', err.message);
+    container.innerHTML = `
+      <div class="text-center py-10">
+        <i class="fas fa-exclamation-triangle text-red-300 text-3xl mb-3"></i>
+        <p class="text-red-500 text-xs font-bold">조회 실패: ${err.message}</p>
+      </div>`;
+  }
+}
+
+function checkinBadge(status) {
+  if (!status) return '<span class="text-gray-300 text-[10px] font-bold">— 미출근</span>';
+  if (status === 'pass' || status === 'pass_override')
+    return '<span class="bg-emerald-50 text-emerald-600 font-bold text-[10px] px-2 py-0.5 rounded-full">✅ PASS</span>';
+  return '<span class="bg-red-50 text-red-500 font-bold text-[10px] px-2 py-0.5 rounded-full">❌ FAIL</span>';
+}
+
+function groupDropdown(currentGroupId, itemType, itemId) {
+  const options = groupsData.length > 0 ? groupsData : [];
+  return `
+    <select onchange="changeWorkerGroup('${itemType}', ${itemId}, this.value)"
+      class="border border-gray-200 rounded-lg px-2 py-1 text-[11px] font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white cursor-pointer">
+      <option value="" ${!currentGroupId ? 'selected' : ''}>미배정</option>
+      ${options.map(g => `<option value="${g.id}" ${g.id === currentGroupId ? 'selected' : ''}>${g.name}</option>`).join('')}
+    </select>`;
+}
+
+async function changeWorkerGroup(type, id, newGroupId) {
+  const gid = newGroupId ? parseInt(newGroupId) : null;
+  try {
+    if (type === 'employee') {
+      await api.updateEmployee(id, { group_id: gid });
+    } else {
+      await api.updateUser(id, { group_id: gid });
+    }
+    // 그룹 데이터 갱신 (user_count 변경 반영)
+    try { groupsData = await api.getGroups(); } catch {}
+    loadWorkers();
+  } catch (err) {
+    alert('그룹 변경 실패: ' + err.message);
+  }
+}
+
+function renderEmployeeTable() {
+  const container = document.getElementById('workers-table-container');
+  if (workersEmployeeData.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-10">
+        <i class="fas fa-briefcase text-gray-200 text-4xl mb-3"></i>
+        <p class="text-sm font-bold text-gray-500">등록된 정규직 사원이 없습니다</p>
+        <p class="text-[10px] text-gray-400 mt-1">"사원 등록" 버튼으로 추가하세요.</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="w-full text-left text-xs">
+      <thead class="bg-gray-50 text-gray-400 font-bold uppercase tracking-wider sticky top-0">
+        <tr>
+          <th class="px-5 py-3">사원번호</th>
+          <th class="px-5 py-3">언어</th>
+          <th class="px-5 py-3 text-center">체크인</th>
+          <th class="px-5 py-3">그룹</th>
+          <th class="px-5 py-3 text-right">관리</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        ${workersEmployeeData.map(e => `
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-5 py-3">
+              <span class="font-bold text-gray-800">${e.emp_no}</span>
+            </td>
+            <td class="px-5 py-3">
+              <span class="bg-blue-50 text-blue-700 font-bold text-[10px] px-2 py-0.5 rounded-full">${LANG_LABELS[e.language] || e.language}</span>
+            </td>
+            <td class="px-5 py-3 text-center">${checkinBadge(e.checkin_status)}</td>
+            <td class="px-5 py-3">${groupDropdown(e.group_id, 'employee', e.id)}</td>
+            <td class="px-5 py-3 text-right">
+              <button onclick="deleteEmployeeConfirm(${e.id}, '${e.emp_no}')"
+                class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                title="삭제">
+                <i class="fas fa-trash text-[10px]"></i>
+              </button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div class="p-3 border-t border-gray-50 bg-gray-50/30 text-[10px] text-gray-400 font-bold">
+      총 ${workersEmployeeData.length}명
+    </div>`;
+}
+
+function renderUserTable() {
+  const container = document.getElementById('workers-table-container');
+
+  // 오늘 출근한 일용직만 필터 (checkin_status가 있는 경우)
+  const todayUsers = workersUserData.filter(u => u.checkin_status);
+
+  if (todayUsers.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-10">
+        <i class="fas fa-hard-hat text-gray-200 text-4xl mb-3"></i>
+        <p class="text-sm font-bold text-gray-500">오늘 출근한 일용직 작업자가 없습니다</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="w-full text-left text-xs">
+      <thead class="bg-gray-50 text-gray-400 font-bold uppercase tracking-wider sticky top-0">
+        <tr>
+          <th class="px-5 py-3">시스템 ID</th>
+          <th class="px-5 py-3">언어</th>
+          <th class="px-5 py-3 text-center">체크인</th>
+          <th class="px-5 py-3">그룹</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        ${todayUsers.map(u => `
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-5 py-3">
+              <span class="font-mono font-bold text-gray-700 text-[11px]">${u.system_id}</span>
+            </td>
+            <td class="px-5 py-3">
+              <span class="bg-blue-50 text-blue-700 font-bold text-[10px] px-2 py-0.5 rounded-full">${LANG_LABELS[u.language] || u.language}</span>
+            </td>
+            <td class="px-5 py-3 text-center">${checkinBadge(u.checkin_status)}</td>
+            <td class="px-5 py-3">${groupDropdown(u.group_id, 'user', u.id)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div class="p-3 border-t border-gray-50 bg-gray-50/30 text-[10px] text-gray-400 font-bold">
+      오늘 출근: ${todayUsers.length}명 / 전체 ${workersUserData.length}명
+    </div>`;
+}
+
+/* ── 정규직 사원 등록 모달 ── */
+
+function openAddEmployeeModal() {
+  document.getElementById('emp-add-no').value = '';
+  document.getElementById('emp-add-lang').value = 'ko';
+  document.getElementById('emp-add-error').style.display = 'none';
+
+  // 그룹 드롭다운 갱신
+  const groupSelect = document.getElementById('emp-add-group');
+  groupSelect.innerHTML = '<option value="">미배정</option>' +
+    (groupsData || []).map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+
+  document.getElementById('employee-add-modal').style.display = 'flex';
+  document.getElementById('emp-add-no').focus();
+}
+
+function closeAddEmployeeModal() {
+  document.getElementById('employee-add-modal').style.display = 'none';
+}
+
+async function saveNewEmployee() {
+  const empNo = document.getElementById('emp-add-no').value.trim();
+  const lang = document.getElementById('emp-add-lang').value;
+  const groupId = document.getElementById('emp-add-group').value || null;
+  const errEl = document.getElementById('emp-add-error');
+
+  if (!empNo) {
+    errEl.textContent = '사원번호를 입력하세요.';
+    errEl.style.display = '';
+    return;
+  }
+
+  const btn = document.getElementById('emp-add-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 등록 중...';
+  errEl.style.display = 'none';
+
+  try {
+    await api.createEmployee(empNo, lang, groupId ? parseInt(groupId) : null);
+    closeAddEmployeeModal();
+    loadWorkers();
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = '';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check mr-1"></i> 등록';
+  }
+}
+
+async function deleteEmployeeConfirm(id, empNo) {
+  if (!confirm(`사원 "${empNo}"을(를) 삭제하시겠습니까?`)) return;
+  try {
+    await api.deleteEmployee(id);
+    loadWorkers();
+  } catch (err) {
+    alert('삭제 실패: ' + err.message);
+  }
+}
+
+// 엔터키로 사원 등록
+document.addEventListener('DOMContentLoaded', () => {
+  const empInput = document.getElementById('emp-add-no');
+  if (empInput) empInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveNewEmployee(); });
+});
+
+// ════════════════════════════════════════════════════════════
+// 16. 페이지 로드 진입점
 // ════════════════════════════════════════════════════════════
 
 window.addEventListener('load', () => {

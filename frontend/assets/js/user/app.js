@@ -13,7 +13,6 @@ const state = {
   scanStream: null,      // scan 화면 웹캠 스트림
   capturedBase64: null,  // 촬영 시작 시 캡처된 이미지
   autoResetTimer: null,
-  webrtc: null,          // WebRTCClient 인스턴스
 };
 
 const AUTO_RESET_SEC = 7;
@@ -54,8 +53,10 @@ function showScreen(id) {
 
   document.body.className = SCREEN_BODY_CLASS[id] || "";
 
-  // 카메라 준비 화면 아닐 때 ready 스트림 중지
-  if (id !== "screen-ready") stopCamera();
+  // 카메라가 필요 없는 화면에서만 스트림 중지
+  // ready/scanning/fail 화면에서는 카메라 유지 (재시도 시 스트림 재사용)
+  const keepCamera = new Set(["screen-ready", "screen-scanning", "screen-fail"]);
+  if (!keepCamera.has(id)) stopCamera();
 }
 
 function flash() {
@@ -130,9 +131,6 @@ async function startCamera() {
     if (loading) loading.style.display = "none";
     if (video)   video.style.display   = "block";
 
-    // WebRTC 연결 시도
-    _startWebRTC(stream);
-
   } catch (err) {
     if (loading) loading.style.display = "none";
     if (errBox)  errBox.style.display  = "";
@@ -147,7 +145,7 @@ async function startCamera() {
 }
 
 function stopCamera() {
-  _stopWebRTC();
+  if (typeof FaceGuide !== "undefined") FaceGuide.stopLoop();
   stopScanStream();
   const video = $("cam-video");
   if (video) { video.srcObject = null; }
@@ -178,39 +176,6 @@ function captureFrame() {
   canvas.height = video.videoHeight;
   canvas.getContext("2d").drawImage(video, 0, 0);
   return canvas;
-}
-
-/* ── WebRTC 헬퍼 ─────────────────────────────── */
-function _startWebRTC(stream) {
-  if (typeof WebRTCClient === "undefined") return;
-  _stopWebRTC();
-  state.webrtc = new WebRTCClient({
-    onResult: _handleWebRTCResult,
-    onStateChange: (s) => console.log("[WebRTC]", s),
-  });
-  state.webrtc.start(stream).then((ok) => {
-    if (!ok) {
-      console.log("[WebRTC] 연결 실패 — HTTP API fallback 사용");
-      state.webrtc = null;
-    }
-  });
-}
-
-function _stopWebRTC() {
-  if (state.webrtc) {
-    state.webrtc.stop();
-    state.webrtc = null;
-  }
-}
-
-// WebRTC 결과 콜백
-function _handleWebRTCResult({ helmetOk, vestOk }) {
-  stopScanStream();
-  detectItem("helmet", helmetOk);
-  delay(400).then(() => {
-    detectItem("vest", vestOk);
-    return delay(600);
-  }).then(() => showResult({ helmetOk, vestOk }));
 }
 
 /* ── 사진 캡처 ───────────────────────────────── */
@@ -250,35 +215,59 @@ async function callDetectAPI() {
     const base64 = state.capturedBase64;
     if (!base64) throw new Error("캡처 없음");
 
-    // base64 → Blob 변환
-    const byteString = atob(base64.split(",")[1]);
-    const mimeString = base64.split(",")[0].split(":")[1].split(";")[0];
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) {
-      ia[i] = byteString.charCodeAt(i);
-    }
-    const blob = new Blob([ab], { type: mimeString });
+    // BASE64 문자열을 그대로 JSON으로 전송 (Blob 변환 불필요)
+    _updateProgressLabel("서버 분석 중...");
+    const result = await api.checkin(base64);
 
-    const result = await api.checkin(blob);
+    // retry — Face API에서 정면 아님 판정 → MediaPipe 루프 재시작
+    if (result.status === "retry") {
+      _updateProgressLabel("정면 재확인 필요");
+      speak(result.message || "정면을 바라봐 주세요");
+      _updateFaceGuide("not_frontal");
+      // 스캔 화면 유지, 웹캠 다시 표시 + MediaPipe 루프 재시작
+      const webcam = $("webcam");
+      const canvas = $("captureCanvas");
+      const preview = $("scan-preview");
+      if (preview) { preview.style.display = "none"; }
+      if (webcam && state.stream) {
+        webcam.srcObject = state.stream;
+        await webcam.play().catch(() => {});
+      }
+      FaceGuide.startLoop(webcam, canvas,
+        (base64) => {
+          _updateFaceGuide("captured");
+          flash();
+          state.capturedBase64 = base64;
+          showCapturedInScanView();
+          _updateProgressLabel("서버 분석 중...");
+          callDetectAPI();
+        },
+        (status) => { _updateFaceGuide(status); }
+      );
+      return;
+    }
+
+    // 서버 응답의 attempt_count로 프론트 failCount 동기화
+    state.failCount = result.attempt;
+
     const { helmetOk, vestOk } = result;
 
+    _updateProgressLabel("판정 완료");
     stopScanStream();
     detectItem("helmet", helmetOk);
     await delay(400);
     detectItem("vest", vestOk);
     await delay(600);
-    showResult({ helmetOk, vestOk });
+    showResult({ helmetOk, vestOk, needsAdmin: result.needsAdmin });
 
   } catch (err) {
     console.error("감지 API 오류:", err);
-    // API 오류 시 mock fallback
     stopScanStream();
-    detectItem("helmet", true);
-    await delay(400);
-    detectItem("vest", true);
-    await delay(600);
-    showResult({ helmetOk: true, vestOk: true });
+    // API 오류 시 카메라 화면으로 복귀 (mock fallback 제거)
+    speak("서버 오류가 발생했습니다. 다시 시도해 주세요.");
+    initReadyScreen();
+    showScreen("screen-ready");
+    startCamera();
   }
 }
 
@@ -296,14 +285,14 @@ function detectItem(item, ok) {
 }
 
 /* ── 결과 표시 ───────────────────────────────── */
-function showResult({ helmetOk, vestOk }) {
+function showResult({ helmetOk, vestOk, needsAdmin }) {
   const passed = helmetOk && vestOk;
   flash();
   if (passed) {
     showPassScreen();
   } else {
-    state.failCount++;
-    showFailScreen({ helmetOk, vestOk });
+    // failCount는 callDetectAPI()에서 서버 attempt_count로 동기화됨
+    showFailScreen({ helmetOk, vestOk, needsAdmin });
   }
 }
 
@@ -354,7 +343,7 @@ function clearAutoReset() {
 }
 
 /* ── FAIL 화면 ───────────────────────────────── */
-function showFailScreen({ helmetOk, vestOk }) {
+function showFailScreen({ helmetOk, vestOk, needsAdmin }) {
   const lang = LANGUAGES.find((l) => l.code === state.lang);
   const cc = lang?.cc || "kr";
   $("fail-pin-badge").innerHTML = `<img src="https://flagcdn.com/w40/${cc}.png" alt="" style="height:1em;border-radius:3px;vertical-align:middle;margin-right:4px;"> ●●●-●●●●-${state.pin}`;
@@ -397,8 +386,8 @@ function showFailScreen({ helmetOk, vestOk }) {
   $("retry-native").textContent = `🔄 ${t("retryBtn")} (${state.failCount}/3)`;
   $("retry-ko").textContent     = state.lang !== "ko" ? `재시도 (${state.failCount}/3)` : "";
 
-  // 3회 이상 실패 → 에스컬레이션
-  if (state.failCount >= 3) {
+  // 서버에서 3회 실패 판정 시 에스컬레이션
+  if (needsAdmin) {
     $("btn-retry").style.display   = "none";
     $("escalation-box").style.display = "";
     $("escalation-native").textContent = t("escalationNative");
@@ -620,38 +609,116 @@ if ($("lang-grid")) {
   });
 
   $("btn-start-scan").addEventListener("click", () => {
-    // 화면 전환 전에 ready 카메라에서 프레임 캡처
-    state.capturedBase64 = captureFromReadyCam();
-
     flash();
     initScanScreen();
     showScreen("screen-scanning");
 
-    // 캡처된 이미지를 스캔 화면 배경으로 표시
-    showCapturedInScanView();
-    runProgressBar();
-
-    // WebRTC 연결 중이면 서버 측 캡처 요청, 아니면 HTTP API fallback
-    if (state.webrtc?.isConnected) {
-      state.webrtc.requestCapture();
-    } else {
-      setTimeout(() => callDetectAPI(), 500);
-    }
+    // 스캔 화면 웹캠 시작 + MediaPipe 정면 감지 → 자동 캡처 → API 호출
+    _startScanWithFaceGuide();
   });
+
+  /** 스캔 화면에서 웹캠 + MediaPipe 정면 자동 캡처 시작 */
+  async function _startScanWithFaceGuide() {
+    const webcam = $("webcam");
+    const canvas = $("captureCanvas");
+
+    // 기존 ready 카메라 스트림을 스캔 화면 webcam에 연결
+    if (state.stream) {
+      webcam.srcObject = state.stream;
+      await webcam.play().catch(() => {});
+      document.querySelector(".scan-view")?.classList.add("webcam-active");
+    }
+
+    // MediaPipe 초기화 완료 대기 (CDN 로딩이 느릴 수 있음)
+    if (typeof FaceGuide !== "undefined" && !FaceGuide.isReady()) {
+      _updateFaceGuide("no_face");
+      _updateProgressLabel("얼굴 감지 준비 중...");
+      await FaceGuide.init();
+    }
+
+    // 얼굴 가이드 초기 상태
+    _updateFaceGuide("no_face");
+
+    // MediaPipe 정면 감지 루프 — 상태 콜백 + 정면 시 자동 캡처
+    FaceGuide.startLoop(webcam, canvas,
+      // onCapture
+      (base64) => {
+        _updateFaceGuide("captured");
+        flash();
+        state.capturedBase64 = base64;
+        showCapturedInScanView();
+        _updateProgressLabel("얼굴 확인 중...");
+        runProgressBar();
+        callDetectAPI();
+      },
+      // onStatus
+      (status) => {
+        _updateFaceGuide(status);
+      }
+    );
+  }
+
+  /** 얼굴 감지 가이드 메시지 업데이트 */
+  function _updateFaceGuide(status) {
+    const el = $("face-guide-msg");
+    const label = $("prog-label");
+    if (!el) return;
+
+    el.className = "face-guide-msg";
+
+    switch (status) {
+      case "no_face":
+        el.textContent = "카메라를 봐주세요";
+        el.classList.add("guide-error");
+        if (label) label.textContent = "얼굴 감지 대기";
+        break;
+      case "too_close":
+        el.textContent = "뒤로 물러나 상반신이 보이게 해주세요";
+        el.classList.add("guide-warn");
+        if (label) label.textContent = "상반신 확인 중";
+        break;
+      case "not_frontal":
+        el.textContent = "정면을 봐주세요";
+        el.classList.add("guide-warn");
+        if (label) label.textContent = "정면 확인 중";
+        break;
+      case "frontal":
+        el.textContent = "정면 확인!";
+        el.classList.add("guide-ok");
+        break;
+      case "captured":
+        el.textContent = "촬영 완료 — 분석 중...";
+        el.classList.add("guide-ok");
+        break;
+    }
+  }
+
+  /** 프로그레스 라벨 텍스트 변경 */
+  function _updateProgressLabel(text) {
+    const label = $("prog-label");
+    if (label) label.textContent = text;
+  }
 
   $("btn-reset").addEventListener("click", resetToLang);
   $("btn-next-worker").addEventListener("click", resetToLang);
 
-  $("btn-retry").addEventListener("click", () => {
+  $("btn-retry").addEventListener("click", async () => {
     flash();
-    initReadyScreen();
-    showScreen("screen-ready");
-    startCamera();
+    // 스트림이 죽었으면 카메라 재시작
+    if (!state.stream || !state.stream.active) {
+      await startCamera();
+    }
+    initScanScreen();
+    showScreen("screen-scanning");
+    _startScanWithFaceGuide();
   });
 
   $("btn-reset-fail").addEventListener("click", resetToLang);
 
   /* ── 초기화 (index.html) ─────────────────────── */
+  // MediaPipe FaceDetector 사전 로드 (비동기, 로그인 전에 미리 준비)
+  if (typeof FaceGuide !== "undefined") FaceGuide.init();
+
   initLangScreen();
 
   // 사번 로그인 후 복귀 시 (emp-login.html → ?auth=1&lang=xx)
