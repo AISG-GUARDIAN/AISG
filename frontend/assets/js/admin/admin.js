@@ -64,6 +64,9 @@ const LANG_META = {
   '기타':     { flag: '🌐', color: '#64748B' },
 };
 
+// 언어 코드 → 한국어 라벨 변환 (그룹 관리에서도 사용)
+const LANG_CODE_MAP = { vi: '베트남어', zh: '중국어', km: '크메르어', th: '태국어', ko: '한국어', en: '영어' };
+
 // 정렬된 언어 순서 (차트/범례에서 일관되게 사용)
 const LANG_ORDER = ['베트남어', '중국어', '크메르어', '태국어', '한국어', '기타'];
 
@@ -442,6 +445,7 @@ const titleMap = {
   'checkin':   ['체크인 기록', '작업자 체크인 이력 조회'],
   'daily':     ['일별 데이터', '일별 체크인 현황 분석'],
   'monthly':   ['월별 데이터', '월별 체크인 종합 분석'],
+  'group':     ['그룹 관리', '작업 그룹 및 소속 인원 관리'],
   'alarm':     ['시스템 알림', '알림 및 경고 메시지']
 };
 
@@ -455,6 +459,7 @@ function navigate(p) {
   if (p === 'checkin') { curPage = 1; renderCheckinTable(); }
   if (p === 'daily') { renderDailyPage(); }
   if (p === 'monthly') { renderMonthSelector(); }
+  if (p === 'group') { loadGroupPage(); }
   if (p === 'alarm') { loadNotifications(); }
 }
 
@@ -799,6 +804,446 @@ async function confirmOverride() {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-check mr-1"></i> PASS 처리';
   }
+}
+
+// ════════════════════════════════════════════════════════════
+// 15. 그룹 관리 페이지 (신규)
+// ════════════════════════════════════════════════════════════
+//
+// ┌──────────────────────────────────────────────────────┐
+// │  이 섹션에서 사용하는 실제 백엔드 API:                   │
+// │                                                      │
+// │  GET    /admin/groups              → 그룹 목록         │
+// │  POST   /admin/groups              → 그룹 생성         │
+// │  PUT    /admin/groups/{group_id}   → 그룹 이름 수정     │
+// │  DELETE /admin/groups/{group_id}   → 그룹 삭제 (204)   │
+// │  GET    /admin/users?group_id=X    → 소속 일용직 목록   │
+// │                                                      │
+// │  ※ api.js에 해당 함수가 있으면 우선 사용하고,            │
+// │    없으면 아래 fallback이 직접 fetch 합니다.            │
+// └──────────────────────────────────────────────────────┘
+
+let groupsData = [];         // 그룹 목록
+let selectedGroupId = null;  // 현재 선택된 그룹 ID
+let groupModalMode = 'create'; // 'create' | 'edit'
+let editingGroupId = null;
+let deleteTargetGroupId = null;
+
+// ── API Fallback (api.js에 해당 함수가 없을 때 직접 fetch) ──
+// 백엔드 개발자님이 api.js에 추가하면 이 fallback은 자동으로 무시됩니다.
+
+function getAuthHeaders() {
+  const token = api.getAdminToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+async function apiGetGroups() {
+  if (typeof api.getGroups === 'function') return api.getGroups();
+  const res = await fetch('/admin/groups', { headers: getAuthHeaders() });
+  if (!res.ok) throw new Error(`그룹 목록 조회 실패 (${res.status})`);
+  return res.json();
+}
+
+async function apiCreateGroup(name) {
+  if (typeof api.createGroup === 'function') return api.createGroup(name);
+  const res = await fetch('/admin/groups', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error(`그룹 생성 실패 (${res.status})`);
+  return res.json();
+}
+
+async function apiUpdateGroup(id, name) {
+  if (typeof api.updateGroup === 'function') return api.updateGroup(id, name);
+  const res = await fetch(`/admin/groups/${id}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error(`그룹 수정 실패 (${res.status})`);
+  return res.json();
+}
+
+async function apiDeleteGroup(id) {
+  if (typeof api.deleteGroup === 'function') return api.deleteGroup(id);
+  const res = await fetch(`/admin/groups/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(`그룹 삭제 실패 (${res.status})`);
+  // DELETE는 204 No Content 반환 — 본문 없음
+  return { ok: true };
+}
+
+async function apiGetGroupUsers(groupId) {
+  if (typeof api.getGroupUsers === 'function') return api.getGroupUsers(groupId);
+  const res = await fetch(`/admin/users?group_id=${groupId}`, { headers: getAuthHeaders() });
+  if (!res.ok) throw new Error(`소속 작업자 조회 실패 (${res.status})`);
+  return res.json();
+}
+
+// ── 그룹 페이지 진입점 ──
+
+async function loadGroupPage() {
+  try {
+    groupsData = await apiGetGroups();
+  } catch (err) {
+    console.error('그룹 목록 조회 실패:', err.message);
+    groupsData = [];
+  }
+  renderGroupKPI();
+  renderGroupList();
+
+  // 이전에 선택한 그룹이 있으면 상세 유지
+  if (selectedGroupId) {
+    const stillExists = groupsData.find(g => g.id === selectedGroupId);
+    if (stillExists) {
+      selectGroup(selectedGroupId);
+    } else {
+      selectedGroupId = null;
+      renderGroupDetailPlaceholder();
+    }
+  }
+}
+
+// ── KPI 카드 ──
+
+function renderGroupKPI() {
+  const totalGroups = groupsData.length;
+  let totalWorker = 0;
+
+  groupsData.forEach(g => {
+    totalWorker += g.user_count || 0;
+  });
+
+  const el = (id) => document.getElementById(id);
+  if (el('group-kpi-total')) el('group-kpi-total').innerText = totalGroups;
+  if (el('group-kpi-workers')) el('group-kpi-workers').innerText = totalWorker;
+}
+
+// ── 그룹 목록 렌더 ──
+
+function renderGroupList() {
+  const container = document.getElementById('group-list-container');
+
+  if (groupsData.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-8 text-gray-400">
+        <i class="fas fa-folder-open text-3xl mb-3 text-gray-300"></i>
+        <p class="text-xs font-bold">등록된 그룹이 없습니다</p>
+        <p class="text-[10px] text-gray-400 mt-1">"새 그룹" 버튼을 눌러 그룹을 생성하세요</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = groupsData.map(g => {
+    const memberTotal = g.user_count || 0;
+    const isSelected = g.id === selectedGroupId;
+
+    return `
+      <div onclick="selectGroup(${g.id})"
+        class="group-card p-4 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-50/50' : 'border-gray-100 bg-white hover:border-blue-200 hover:bg-gray-50'}">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-base ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}">
+              <i class="fas fa-users"></i>
+            </div>
+            <div>
+              <div class="text-sm font-bold ${isSelected ? 'text-blue-800' : 'text-gray-800'}">${escapeHtml(g.name)}</div>
+              <div class="flex items-center gap-3 mt-0.5">
+                <span class="text-[10px] text-gray-400">
+                  <i class="fas fa-user mr-0.5"></i> 작업자 ${g.user_count || 0}명
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="text-xs font-black ${isSelected ? 'text-blue-600' : 'text-gray-700'}">${memberTotal}명</span>
+            <div class="flex items-center gap-1 ml-2" onclick="event.stopPropagation()">
+              <button onclick="openGroupModal('edit', ${g.id}, '${escapeHtml(g.name)}')" class="w-7 h-7 rounded-lg bg-gray-100 hover:bg-blue-100 flex items-center justify-center transition-colors" title="이름 수정">
+                <i class="fas fa-pen text-[10px] text-gray-400 hover:text-blue-600"></i>
+              </button>
+              <button onclick="openDeleteModal(${g.id}, '${escapeHtml(g.name)}', ${memberTotal})" class="w-7 h-7 rounded-lg bg-gray-100 hover:bg-red-100 flex items-center justify-center transition-colors" title="삭제">
+                <i class="fas fa-trash text-[10px] text-gray-400 hover:text-red-600"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── 그룹 상세 (우측 패널) ──
+
+async function selectGroup(groupId) {
+  selectedGroupId = groupId;
+  renderGroupList(); // 선택 상태 갱신
+
+  const detailArea = document.getElementById('group-detail-area');
+  const group = groupsData.find(g => g.id === groupId);
+  if (!group) return;
+
+  // 로딩 표시
+  detailArea.innerHTML = `
+    <div class="text-center py-16 text-gray-400">
+      <i class="fas fa-spinner fa-spin text-3xl mb-3 text-gray-300"></i>
+      <p class="text-xs">소속 인원을 불러오는 중...</p>
+    </div>`;
+
+  let users;
+  try {
+    users = await apiGetGroupUsers(groupId);
+  } catch (err) {
+    console.error('작업자 조회 실패:', err.message);
+    detailArea.innerHTML = `
+      <div class="text-center py-16 text-gray-400">
+        <i class="fas fa-circle-exclamation text-3xl mb-3 text-red-300"></i>
+        <p class="text-sm font-bold text-red-500">작업자 정보를 불러올 수 없습니다</p>
+        <p class="text-[10px] text-gray-400 mt-1">${escapeHtml(err.message)}</p>
+        <button onclick="selectGroup(${groupId})" class="mt-3 text-xs font-bold text-blue-600 hover:text-blue-800">
+          <i class="fas fa-arrows-rotate mr-1"></i> 다시 시도
+        </button>
+      </div>`;
+    return;
+  }
+
+  renderGroupDetail(group, users);
+}
+
+function renderGroupDetail(group, users) {
+  const detailArea = document.getElementById('group-detail-area');
+
+  // /admin/users?group_id=X 응답:
+  // [{ id, system_id, language, group_id, group_name, created_at }]
+  const userList = Array.isArray(users) ? users : [];
+
+  // 언어별 통계 계산
+  const langCounts = {};
+  userList.forEach(u => {
+    const label = LANG_CODE_MAP[u.language] || u.language || '기타';
+    langCounts[label] = (langCounts[label] || 0) + 1;
+  });
+
+  detailArea.innerHTML = `
+    <!-- 그룹 헤더 -->
+    <div class="flex items-center justify-between mb-5">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white text-xl">
+          <i class="fas fa-users"></i>
+        </div>
+        <div>
+          <h4 class="text-lg font-bold text-gray-800">${escapeHtml(group.name)}</h4>
+          <p class="text-[11px] text-gray-400">소속 작업자 ${userList.length}명</p>
+        </div>
+      </div>
+      <button onclick="selectGroup(${group.id})" class="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-xl text-xs font-bold text-gray-600 transition-colors">
+        <i class="fas fa-arrows-rotate"></i>
+      </button>
+    </div>
+
+    <!-- 국적 분포 태그 -->
+    ${userList.length > 0 ? `
+    <div class="flex flex-wrap gap-2 mb-5">
+      ${Object.entries(langCounts).map(([label, count]) => `
+        <div class="flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5">
+          <span class="text-sm">${langFlag(label)}</span>
+          <span class="text-[11px] font-bold text-gray-700">${label}</span>
+          <span class="text-[11px] font-black" style="color:${langColor(label)}">${count}명</span>
+        </div>
+      `).join('')}
+    </div>` : ''}
+
+    <!-- 일용직 작업자 테이블 -->
+    <div>
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-6 h-6 bg-orange-50 rounded-md flex items-center justify-center">
+          <i class="fas fa-user text-orange-600 text-[10px]"></i>
+        </div>
+        <h5 class="text-sm font-bold text-gray-800">소속 작업자</h5>
+        <span class="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full font-bold">${userList.length}명</span>
+      </div>
+      ${userList.length > 0 ? `
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-gray-50 text-gray-400 font-bold uppercase tracking-wider">
+            <tr>
+              <th class="px-4 py-3">시스템 ID</th>
+              <th class="px-4 py-3">국적/언어</th>
+              <th class="px-4 py-3">등록일</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            ${userList.map(u => {
+              const label = LANG_CODE_MAP[u.language] || u.language || '기타';
+              const createdDate = u.created_at ? u.created_at.split('T')[0] : '';
+              return `
+              <tr class="trow transition-colors">
+                <td class="px-4 py-3 font-bold text-gray-600 font-mono">${escapeHtml(u.system_id)}</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <span class="text-base">${langFlag(label)}</span>
+                    <span class="font-bold text-gray-700">${label}</span>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-gray-400">${createdDate}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>` : `
+      <div class="bg-gray-50 rounded-xl p-4 text-center">
+        <p class="text-xs text-gray-400">소속 작업자가 없습니다</p>
+      </div>`}
+    </div>
+  `;
+}
+
+function renderGroupDetailPlaceholder() {
+  document.getElementById('group-detail-area').innerHTML = `
+    <div class="text-center py-16 text-gray-400">
+      <i class="fas fa-arrow-left text-4xl mb-3 text-gray-300"></i>
+      <p class="text-sm font-bold">좌측에서 그룹을 선택해주세요</p>
+      <p class="text-[10px] text-gray-400 mt-1">그룹의 소속 인원 정보를 확인할 수 있습니다</p>
+    </div>`;
+}
+
+// ── 그룹 생성/수정 모달 ──
+
+function openGroupModal(mode, groupId, groupName) {
+  groupModalMode = mode;
+  editingGroupId = groupId || null;
+
+  const titleEl = document.getElementById('group-modal-title');
+  const subtitleEl = document.getElementById('group-modal-subtitle');
+  const input = document.getElementById('group-name-input');
+  const errorEl = document.getElementById('group-modal-error');
+  const saveBtn = document.getElementById('group-save-btn');
+
+  errorEl.style.display = 'none';
+
+  if (mode === 'create') {
+    titleEl.innerText = '새 그룹 생성';
+    subtitleEl.innerText = '새 작업 그룹의 이름을 입력하세요.';
+    input.value = '';
+    saveBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> 생성';
+  } else {
+    titleEl.innerText = '그룹 이름 수정';
+    subtitleEl.innerText = '변경할 그룹 이름을 입력하세요.';
+    input.value = groupName || '';
+    saveBtn.innerHTML = '<i class="fas fa-check mr-1"></i> 저장';
+  }
+
+  const modal = document.getElementById('group-modal');
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+  input.focus();
+}
+
+function closeGroupModal() {
+  const modal = document.getElementById('group-modal');
+  modal.classList.add('hidden');
+  modal.style.display = 'none';
+  editingGroupId = null;
+}
+
+async function saveGroup() {
+  const input = document.getElementById('group-name-input');
+  const errorEl = document.getElementById('group-modal-error');
+  const saveBtn = document.getElementById('group-save-btn');
+  const name = input.value.trim();
+
+  if (!name) {
+    errorEl.textContent = '그룹 이름을 입력하세요.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  errorEl.style.display = 'none';
+  saveBtn.disabled = true;
+  const originalHtml = saveBtn.innerHTML;
+  saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 처리 중...';
+
+  try {
+    if (groupModalMode === 'create') {
+      await apiCreateGroup(name);
+    } else {
+      await apiUpdateGroup(editingGroupId, name);
+    }
+    closeGroupModal();
+    await loadGroupPage(); // 목록 새로고침
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.style.display = 'block';
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = originalHtml;
+  }
+}
+
+// ── 그룹 삭제 모달 ──
+
+function openDeleteModal(groupId, groupName, memberCount) {
+  deleteTargetGroupId = groupId;
+
+  document.getElementById('group-delete-info').innerHTML = `
+    <div class="flex items-center gap-2 mb-1">
+      <i class="fas fa-users text-red-400"></i>
+      <span class="font-bold">${escapeHtml(groupName)}</span>
+    </div>
+    <p class="text-[10px]">이 그룹에 소속된 작업자: <strong>${memberCount}명</strong></p>
+    ${memberCount > 0 ? '<p class="text-[10px] mt-1 text-red-600 font-bold">⚠ 삭제 시 소속 작업자는 그룹 미배정 상태가 됩니다.</p>' : ''}
+  `;
+
+  const modal = document.getElementById('group-delete-modal');
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+}
+
+function closeDeleteModal() {
+  deleteTargetGroupId = null;
+  const modal = document.getElementById('group-delete-modal');
+  modal.classList.add('hidden');
+  modal.style.display = 'none';
+}
+
+async function confirmDeleteGroup() {
+  if (!deleteTargetGroupId) return;
+
+  const btn = document.getElementById('group-delete-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 삭제 중...';
+
+  try {
+    await apiDeleteGroup(deleteTargetGroupId);
+
+    // 삭제된 그룹이 선택 중이었으면 선택 해제
+    if (selectedGroupId === deleteTargetGroupId) {
+      selectedGroupId = null;
+      renderGroupDetailPlaceholder();
+    }
+
+    closeDeleteModal();
+    await loadGroupPage();
+  } catch (err) {
+    alert('그룹 삭제 실패: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-trash mr-1"></i> 삭제';
+  }
+}
+
+// ── 유틸 ──
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
 }
 
 // ════════════════════════════════════════════════════════════
