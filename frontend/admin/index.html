@@ -10,36 +10,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
  
-  <link rel="stylesheet" href="../assets/css/admin-style.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
  
 <body>
-  <!-- ══════════════════ 로그인 모달 ══════════════════ -->
-  <div id="login-overlay" class="login-overlay">
-    <div class="login-card">
-      <div class="login-header">
-        <div class="login-logo">
-          <i class="fas fa-shield-halved"></i>
-        </div>
-        <h2>AI Safe Guardian</h2>
-        <p>관리자 로그인</p>
-      </div>
-      <form id="login-form" onsubmit="handleAdminLogin(event)">
-        <div class="login-field">
-          <label for="login-emp-no"><i class="fas fa-id-badge"></i> 사원번호</label>
-          <input type="text" id="login-emp-no" placeholder="사원번호를 입력하세요" required autocomplete="off" />
-        </div>
-        <p id="login-error" class="login-error" style="display:none;"></p>
-        <button type="submit" id="login-btn" class="login-submit">
-          <i class="fas fa-right-to-bracket"></i> 로그인
-        </button>
-      </form>
-      <div class="login-footer">
-        <i class="fas fa-lock"></i> 등록된 관리자 사원번호만 접근 가능합니다
-      </div>
-    </div>
-  </div>
-
   <aside class="sidebar flex flex-col p-4">
     <div class="flex items-center gap-3 px-2 py-6 border-b border-white/10 mb-6">
       <div class="w-11 h-11 bg-[#F47C20] rounded-xl flex items-center justify-center shadow-lg">
@@ -82,8 +56,8 @@
       <button onclick="navigate('alarm')" id="nav-alarm" class="nav-item group relative">
         <span class="nav-icon"><i class="fas fa-bell"></i></span>
         <span class="flex-1 text-left font-medium">알림</span>
-        <span id="fail-badge" class="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] flex items-center justify-center shadow-sm hidden">
-          0
+        <span id="fail-badge" class="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] flex items-center justify-center shadow-sm">
+          3
         </span>
       </button>
     </nav>
@@ -94,11 +68,11 @@
         <p class="text-white text-xs font-bold truncate">관리자</p>
         <p class="text-white/40 text-[10px]">슈퍼 관리자</p>
       </div>
-      <i class="fas fa-right-from-bracket text-white/30 text-xs cursor-pointer" onclick="handleAdminLogout()" title="로그아웃"></i>
+      <i class="fas fa-right-from-bracket text-white/30 text-xs cursor-pointer"></i>
     </div>
   </aside>
  
-  <div class="flex-1 flex flex-col min-w-0">
+  <div class="flex-1 flex flex-col min-width-0">
     <header class="bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center shadow-sm z-10">
       <div>
         <h2 id="page-title" class="text-lg font-bold text-gray-800">실시간 대시보드</h2>
@@ -180,7 +154,66 @@
               </div>
             </div>
             <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-              <!-- JS renderLanguageDonut()에서 동적으로 채워짐 -->
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#F47C20;"></div>
+                  <span style="font-size:12px; color:#374151;">🇻🇳 베트남어</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:60px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:24%; height:100%; background:#F47C20;"></div></div>
+                  <span style="font-size:12px; font-weight:600; color:#111827; min-width:28px; text-align:right;">24%</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#DC2626;"></div>
+                  <span style="font-size:12px; color:#374151;">🇨🇳 중국어</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:60px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:26%; height:100%; background:#DC2626;"></div></div>
+                  <span style="font-size:12px; font-weight:600; color:#111827; min-width:28px; text-align:right;">26%</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#CA8A04;"></div>
+                  <span style="font-size:12px; color:#374151;">🇰🇭 크메르어</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:60px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:25%; height:100%; background:#CA8A04;"></div></div>
+                  <span style="font-size:12px; font-weight:600; color:#111827; min-width:28px; text-align:right;">25%</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#7C3AED;"></div>
+                  <span style="font-size:12px; color:#374151;">🇹🇭 태국어</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:60px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:20%; height:100%; background:#7C3AED;"></div></div>
+                  <span style="font-size:12px; font-weight:600; color:#111827; min-width:28px; text-align:right;">20%</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#1A56A0;"></div>
+                  <span style="font-size:12px; color:#374151;">🇰🇷 한국어</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:60px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:4%; height:100%; background:#1A56A0;"></div></div>
+                  <span style="font-size:12px; font-weight:600; color:#111827; min-width:28px; text-align:right;">4%</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#64748B;"></div>
+                  <span style="font-size:12px; color:#374151;">🌐 기타</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:60px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:1%; height:100%; background:#64748B;"></div></div>
+                  <span style="font-size:12px; font-weight:600; color:#111827; min-width:28px; text-align:right;">1%</span>
+                </div>
+              </div>
             </div>
           </div>
  
@@ -213,17 +246,76 @@
                 <h4 class="text-sm font-bold text-red-600">언어별 FAIL 비율</h4>
                 <div style="font-size:11px; color:#9CA3AF; margin-top:2px;">국적별 실패 분포 현황</div>
               </div>
-              <div style="background:#FEF2F2; color:#DC2626; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:600;">총 --건</div>
+              <div style="background:#FEF2F2; color:#DC2626; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:600;">총 112건</div>
             </div>
             <div style="position:relative; height:200px; display:flex; align-items:center; justify-content:center;">
               <canvas id="failDonutChart"></canvas>
               <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none;">
                 <div style="font-size:16px; font-weight:700; color:#DC2626; line-height:1;">FAIL</div>
-                <div style="font-size:9px; color:#9CA3AF; margin-top:2px;">--건</div>
+                <div style="font-size:9px; color:#9CA3AF; margin-top:2px;">112건</div>
               </div>
             </div>
             <div style="display:flex; flex-direction:column; gap:7px; margin-top:10px;">
-              <!-- JS renderFailDonut()에서 동적으로 채워짐 -->
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#F47C20;"></div>
+                  <span style="font-size:11px; color:#374151;">🇻🇳 베트남</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:50px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:29%; height:100%; background:#F47C20;"></div></div>
+                  <span style="font-size:11px; font-weight:700; color:#111827; min-width:40px; text-align:right;">29% <span style="font-size:9px; color:#9CA3AF; font-weight:500;">32건</span></span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#DC2626;"></div>
+                  <span style="font-size:11px; color:#374151;">🇨🇳 중국</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:50px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:25%; height:100%; background:#DC2626;"></div></div>
+                  <span style="font-size:11px; font-weight:700; color:#111827; min-width:40px; text-align:right;">25% <span style="font-size:9px; color:#9CA3AF; font-weight:500;">28건</span></span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#CA8A04;"></div>
+                  <span style="font-size:11px; color:#374151;">🇰🇭 캄보디아</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:50px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:20%; height:100%; background:#CA8A04;"></div></div>
+                  <span style="font-size:11px; font-weight:700; color:#111827; min-width:40px; text-align:right;">20% <span style="font-size:9px; color:#9CA3AF; font-weight:500;">22건</span></span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#7C3AED;"></div>
+                  <span style="font-size:11px; color:#374151;">🇹🇭 태국</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:50px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:16%; height:100%; background:#7C3AED;"></div></div>
+                  <span style="font-size:11px; font-weight:700; color:#111827; min-width:40px; text-align:right;">16% <span style="font-size:9px; color:#9CA3AF; font-weight:500;">18건</span></span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#1A56A0;"></div>
+                  <span style="font-size:11px; color:#374151;">🇰🇷 한국</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:50px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:7%; height:100%; background:#1A56A0;"></div></div>
+                  <span style="font-size:11px; font-weight:700; color:#111827; min-width:40px; text-align:right;">7% <span style="font-size:9px; color:#9CA3AF; font-weight:500;">8건</span></span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:10px; height:10px; border-radius:3px; background:#64748B;"></div>
+                  <span style="font-size:11px; color:#374151;">🌐 기타</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:50px; height:5px; background:#F3F4F6; border-radius:3px; overflow:hidden;"><div style="width:3%; height:100%; background:#64748B;"></div></div>
+                  <span style="font-size:11px; font-weight:700; color:#111827; min-width:40px; text-align:right;">3% <span style="font-size:9px; color:#9CA3AF; font-weight:500;">4건</span></span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -437,53 +529,15 @@
  
       <!-- ══════════════════ 알림 섹션 ══════════════════ -->
       <section id="section-alarm" class="section">
-        <!-- 필터 바 -->
-        <div class="card p-4 mb-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <h4 class="text-sm font-bold text-gray-800">3회 실패 — 관리자 호출 알림</h4>
-              <p class="text-[10px] text-gray-400 mt-0.5">작업자가 3회 모두 실패하여 관리자 확인이 필요한 건</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="bg-gray-100 p-1 rounded-xl flex gap-1">
-                <button onclick="filterNotifications('all')" id="noti-filter-all" class="filter-btn active">전체</button>
-                <button onclick="filterNotifications('pending')" id="noti-filter-pending" class="filter-btn">미처리</button>
-                <button onclick="filterNotifications('resolved')" id="noti-filter-resolved" class="filter-btn">처리완료</button>
-              </div>
-              <button onclick="loadNotifications()" class="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-xl text-xs font-bold text-gray-600 transition-colors">
-                <i class="fas fa-arrows-rotate"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-        <!-- 알림 목록 -->
-        <div id="notification-list">
-          <div class="card p-10 text-center">
-            <i class="fas fa-spinner fa-spin text-gray-300 text-4xl mb-4"></i>
-            <p class="text-gray-400 text-sm">알림을 불러오는 중...</p>
-          </div>
-        </div>
-        <!-- 오버라이드 모달 -->
-        <div id="override-modal" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; display:none; align-items:center; justify-content:center;">
-          <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h4 class="text-base font-bold text-gray-800 mb-1">PASS 처리 확인</h4>
-            <p class="text-xs text-gray-400 mb-4">해당 작업자의 안전 점검을 수동으로 통과 처리합니다.</p>
-            <div id="override-modal-info" class="bg-gray-50 rounded-xl p-3 mb-4 text-xs text-gray-600"></div>
-            <label class="text-xs font-bold text-gray-700 mb-1 block">통과 사유 (선택)</label>
-            <textarea id="override-reason" rows="2" class="w-full border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none" placeholder="예: 현장 확인 완료, 장비 정상 착용 확인"></textarea>
-            <div class="flex gap-3 mt-4">
-              <button onclick="closeOverrideModal()" class="flex-1 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors">취소</button>
-              <button onclick="confirmOverride()" id="override-confirm-btn" class="flex-1 py-2.5 rounded-xl bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition-colors">
-                <i class="fas fa-check mr-1"></i> PASS 처리
-              </button>
-            </div>
-          </div>
+        <div class="card p-10 text-center">
+          <i class="fas fa-bell text-gray-200 text-6xl mb-4"></i>
+          <h4 class="text-lg font-bold text-gray-800">새로운 알림이 있습니다</h4>
+          <p class="text-gray-400 text-sm">현재 3건의 FAIL 로그가 감지되었습니다.</p>
         </div>
       </section>
     </main>
   </div>
  
-  <script src="../assets/js/api.js"></script>
-  <script src="../assets/js/admin/admin.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

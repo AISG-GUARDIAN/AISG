@@ -127,6 +127,44 @@ const api = {
         return this._adminFetch(`/admin/notifications${qs}`);
     },
 
+    /** 그룹 목록 조회 */
+    async getGroups() {
+        return this._adminFetch("/admin/groups");
+    },
+
+    /** 그룹 생성 */
+    async createGroup(name) {
+        return this._adminFetch("/admin/groups", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name }),
+        });
+    },
+
+    /** 그룹 수정 */
+    async updateGroup(groupId, name) {
+        return this._adminFetch(`/admin/groups/${groupId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name }),
+        });
+    },
+
+    /** 그룹 삭제 */
+    async deleteGroup(groupId) {
+        const token = this.getAdminToken();
+        if (!token) throw new Error("401: 관리자 인증 토큰 없음");
+        const res = await fetch(`${API_BASE}/admin/groups/${groupId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.status === 401) { this.logoutAdmin(); throw new Error("401: 세션이 만료되었습니다"); }
+        if (!res.ok && res.status !== 204) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+    },
+
     /** 서버 헬스체크 */
     async healthCheck() {
         const res = await fetch(`${API_BASE}/api/health`);

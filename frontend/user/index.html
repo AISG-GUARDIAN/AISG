@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Safe Guardian — Worker Check-In</title>
-  <link rel="stylesheet" href="../assets/css/user-style.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
@@ -33,14 +33,14 @@
       <!-- ① 언어 선택 -->
       <section id="screen-lang" class="screen active fade-in">
         <h1 class="title-xl">DAILY CHECK-IN</h1>
-        <p class="sub-text" style="margin-bottom:48px">언어를 선택하세요 · Select Your Language</p>
+        <p class="sub-text" style="margin-bottom:24px">언어를 선택하세요 · Select Your Language</p>
         <div id="lang-grid" class="lang-grid"></div>
-        <p class="caption" style="margin-top:36px">개인정보 비저장 · PASS/FAIL 카운트만 기록</p>
+        <p class="caption" style="margin-top:16px">개인정보 비저장 · PASS/FAIL 카운트만 기록</p>
       </section>
 
       <!-- ② PIN 입력 -->
       <section id="screen-pin" class="screen">
-        <div id="pin-flag" class="flag-xl"></div>
+        <div id="pin-flag" class="flag-xl" style="display:none"></div>
         <p id="pin-prompt-native" class="bilingual-native"></p>
         <p id="pin-prompt-ko" class="bilingual-ko"></p>
 
@@ -54,7 +54,7 @@
 
         <div id="numpad" class="numpad"></div>
 
-        <div class="row-btns" style="margin-top:28px">
+        <div class="row-btns" style="margin-top:10px">
           <button id="btn-back-pin" class="btn-outline">← 뒤로</button>
           <button id="btn-confirm-pin" class="btn-primary" disabled>0 / 4 자리 입력 중</button>
         </div>
@@ -68,7 +68,7 @@
         <p id="ready-greeting-native" class="bilingual-native" style="margin-top:14px"></p>
         <p id="ready-greeting-ko" class="bilingual-ko"></p>
 
-        <div class="cam-view" style="margin:20px 0" id="cam-view-box">
+        <div class="cam-view" id="cam-view-box">
           <!-- 카메라 로딩 중 -->
           <div id="cam-loading" class="cam-placeholder">
             <div class="cam-icon">📷</div>
@@ -105,7 +105,7 @@
           </div>
         </div>
 
-        <button id="btn-start-scan" class="btn-primary btn-lg" style="margin-top:24px">
+        <button id="btn-start-scan" class="btn-primary" style="margin-top:8px">
           <span id="start-native"></span>
           <span id="start-ko" class="btn-sub"></span>
         </button>
@@ -113,13 +113,18 @@
 
       <!-- ④ 스캔 중 -->
       <section id="screen-scanning" class="screen">
-        <div style="text-align:center; margin-bottom:22px">
+        <div style="text-align:center; margin-bottom:8px">
           <div id="scan-label-native" class="scan-label"></div>
           <div id="scan-label-ko" class="scan-label-ko"></div>
         </div>
 
         <div class="scan-view">
           <div class="scan-bg"></div>
+          <!-- 캡처된 정지 이미지 -->
+          <img id="scan-preview" style="display:none">
+          <!-- 실시간 웹캠 피드 -->
+          <video id="webcam" autoplay playsinline muted></video>
+          <canvas id="overlay"></canvas>
           <div class="person-silhouette">
             <div class="person-head"></div>
             <div class="person-body"></div>
@@ -183,7 +188,7 @@
           <div class="auto-reset-bar">
             <div id="auto-reset-fill" class="auto-reset-fill"></div>
           </div>
-          <p id="auto-reset-label" class="caption" style="margin-bottom:12px"></p>
+          <p id="auto-reset-label" class="caption" style="margin-bottom:8px"></p>
           <button id="btn-next-worker" class="btn-pass btn-lg">
             <span id="next-native"></span>
             <span id="next-ko" class="btn-sub"></span>
@@ -237,10 +242,11 @@
 
   </div>
 
-  <script src="../assets/js/user/data.js"></script>
-  <script src="../assets/js/api.js"></script>
-  <script src="../assets/js/user/app.js"></script>
-  <script src="../assets/js/user/camera.js"></script>
+  <canvas id="captureCanvas" style="display:none"></canvas>
+
+  <script src="data.js"></script>
+  <script src="webrtc.js"></script>
+  <script src="app.js"></script>
 </body>
 
 </html>
