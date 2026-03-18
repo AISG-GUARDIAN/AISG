@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Safe Guardian — 사원번호 로그인</title>
+  <link rel="stylesheet" href="../assets/css/user-style.css" />
+</head>
+
+<body>
+
+  <div id="app">
+
+    <header id="header">
+      <div class="header-logo">
+        <span class="header-icon">🚦</span>
+        <div>
+          <div class="header-title">AI SAFE GUARDIAN</div>
+          <div class="header-sub">사원번호 로그인 · Employee Login</div>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <div class="emp-login-wrap">
+        <div class="emp-login-card">
+          <div class="emp-login-icon">🪪</div>
+          <p class="emp-login-title">사원번호를 입력하세요</p>
+          <p class="emp-login-sub" id="emp-sub"></p>
+
+          <div class="emp-input-group">
+            <input id="emp-input" class="emp-input" type="text" inputmode="numeric"
+              pattern="[0-9]*" maxlength="10" placeholder="사원번호 입력" autocomplete="off" />
+          </div>
+
+          <div class="emp-btn-wrap">
+            <button id="btn-back" class="btn-outline">← 뒤로</button>
+            <button id="btn-login" class="btn-primary" disabled>로그인</button>
+          </div>
+
+          <p id="emp-msg" class="emp-msg"></p>
+
+          <a id="link-back" class="emp-back-link">전화번호 뒷자리로 로그인</a>
+        </div>
+      </div>
+    </main>
+
+    <footer id="footer">
+      개인정보 비저장 · PASS/FAIL COUNT ONLY · SESAC 2026
+    </footer>
+
+  </div>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/user/data.js"></script>
+  <script src="../assets/js/user/app.js"></script>
+</body>
+
+</html>

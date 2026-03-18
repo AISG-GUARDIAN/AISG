@@ -3,6 +3,8 @@
 """
 
 from datetime import datetime
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -35,3 +37,9 @@ class GroupResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class GroupMembersResponse(BaseModel):
+    """그룹 소속 멤버 (정규직 + 일용직) 통합 응답."""
+    employees: list[Any] = []
+    users: list[Any] = []

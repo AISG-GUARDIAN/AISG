@@ -1,29 +1,97 @@
-# 환경변수 (절대 커밋 금지)
-.env
-*.env
+# ==========================================
+# Easy Welfare Guide - .gitignore
+# ==========================================
 
-# Python
+# ============ Environment ============
+.env
+.env.*
+!.env.example
+
+# ============ Python ============
+# Byte-compiled
 __pycache__/
 *.py[cod]
-*.pyo
-.venv/
+*$py.class
+*.so
+
+# Virtual environments
 venv/
+.venv/
 env/
-*.egg-info/
+ENV/
+backend/venv/
+backend/.venv/
+
+# Distribution / packaging
+build/
 dist/
+*.egg-info/
+.eggs/
 
-# DB
-*.db
-*.sqlite3
-data/
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
 
-# Node
-node_modules/
+# Type checking
+.mypy_cache/
+.pytype/
+.ruff_cache/
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
-# OS
+# ============ Logs ============
+logs/
+*.log
+
+# ============ Frontend (React) ============
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Production build
+frontend/build/
+frontend/dist/
+
+# Testing
+frontend/coverage/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============ OS ============
 .DS_Store
 Thumbs.db
+
+# ============ Database ============
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+*.db-*
+
+# ============ Temporary ============
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# ============ Project Specific ============
+# Azure credentials (if any)
+azure-credentials.json
+
+# Uploaded files (if storing locally)
+uploads/
+
+# Model cache
+.cache/

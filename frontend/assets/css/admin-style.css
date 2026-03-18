@@ -1,0 +1,85 @@
+    body { font-family: 'Noto Sans KR', sans-serif; background: #F0F4FA; margin: 0; height: 100vh; display: flex; overflow: hidden; }
+    .sidebar { background: linear-gradient(180deg, #1A3A6E 0%, #1A56A0 55%, #1A56A0 100%); width: 200px; flex-shrink: 0; }
+    .nav-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 12px; cursor: pointer; transition: all 0.2s; color: rgba(255,255,255,0.6); font-size: 13px; }
+    .nav-item:hover:not(.active) { background: rgba(255,255,255,0.07); color: white; }
+    .nav-item.active { background: rgba(244, 124, 32, 0.18); border: 1px solid rgba(244, 124, 32, 0.4); color: white; }
+    .nav-icon { width: 32px; height: 32px; background: rgba(255,255,255,0.09); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .nav-item.active .nav-icon { background: #F47C20; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 2px 12px rgba(26, 86, 160, 0.08); border: 1px solid rgba(26, 86, 160, 0.07); }
+    .kpi-card { transition: transform 0.15s; }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .trow:hover { background: #F8FAFC !important; }
+    .filter-btn { cursor: pointer; padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; color: #9CA3AF; transition: all 0.15s; }
+    .filter-btn.active { background: white; box-shadow: 0 1px 5px rgba(0,0,0,0.1); color: #1A56A0; }
+    .section { display: none; }
+    .section.active { display: flex; flex-direction: column; gap: 20px; }
+    
+    .pg-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 11px; font-weight: 600; transition: all 0.2s; border: 1px solid #E5E7EB; background: white; color: #6B7280; }
+    .pg-btn.active { background: #1A56A0; color: white; border-color: #1A56A0; }
+    .pg-btn:hover:not(.active) { background: #F3F4F6; }
+ 
+    .toggle-btn { cursor: pointer; padding: 6px 16px; border-radius: 10px; font-size: 12px; font-weight: 700; transition: all 0.2s; border: 2px solid transparent; }
+    .toggle-btn.pass-active { background: #ECFDF5; color: #059669; border-color: #059669; }
+    .toggle-btn.fail-active { background: #FEF2F2; color: #DC2626; border-color: #DC2626; }
+    .toggle-btn.inactive { background: #F3F4F6; color: #9CA3AF; border-color: #E5E7EB; }
+    .toggle-btn:hover { opacity: 0.85; }
+ 
+    .nation-stat { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #F8FAFC; border-radius: 12px; transition: all 0.15s; }
+    .nation-stat:hover { background: #EBF2FF; transform: translateY(-1px); }
+ 
+    .month-btn { cursor: pointer; padding: 10px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; transition: all 0.2s; border: 1px solid #E5E7EB; background: white; color: #374151; text-align: center; }
+    .month-btn:hover { background: #EBF2FF; border-color: #1A56A0; color: #1A56A0; }
+    .month-btn.active { background: #1A56A0; color: white; border-color: #1A56A0; }
+ 
+    .daily-nav-btn { cursor: pointer; padding: 10px 24px; border-radius: 12px; font-size: 13px; font-weight: 700; transition: all 0.2s; border: 1px solid #E5E7EB; background: white; color: #374151; }
+    .daily-nav-btn:hover { background: #1A56A0; color: white; border-color: #1A56A0; }
+    .daily-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .daily-nav-btn:disabled:hover { background: white; color: #374151; border-color: #E5E7EB; }
+ 
+    /* ── 그룹 카드 ── */
+    .group-card { transition: all 0.2s ease; }
+    .group-card:hover { box-shadow: 0 2px 8px rgba(26, 86, 160, 0.1); }
+
+    /* ── 로그인 모달 ── */
+    .login-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: linear-gradient(135deg, #1A3A6E 0%, #1A56A0 50%, #2563EB 100%);
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity 0.3s;
+    }
+    .login-overlay.hidden { display: none; }
+    .login-card {
+      background: white; border-radius: 24px; padding: 48px 40px 36px;
+      width: 380px; box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+      animation: loginSlideUp 0.4s ease-out;
+    }
+    @keyframes loginSlideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+    .login-header { text-align: center; margin-bottom: 32px; }
+    .login-logo {
+      width: 64px; height: 64px; margin: 0 auto 16px;
+      background: linear-gradient(135deg, #F47C20, #F59E0B); border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; color: white; box-shadow: 0 8px 24px rgba(244,124,32,0.3);
+    }
+    .login-header h2 { font-size: 20px; font-weight: 800; color: #111827; margin: 0 0 4px; }
+    .login-header p { font-size: 13px; color: #9CA3AF; }
+    .login-field { margin-bottom: 20px; }
+    .login-field label { display: block; font-size: 12px; font-weight: 700; color: #374151; margin-bottom: 8px; }
+    .login-field input {
+      width: 100%; padding: 14px 16px; border: 2px solid #E5E7EB; border-radius: 14px;
+      font-size: 15px; font-weight: 500; outline: none; transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+    .login-field input:focus { border-color: #1A56A0; }
+    .login-error { color: #DC2626; font-size: 12px; font-weight: 600; margin: -8px 0 16px; padding: 0; }
+    .login-submit {
+      width: 100%; padding: 14px; border: none; border-radius: 14px; cursor: pointer;
+      background: linear-gradient(135deg, #1A56A0, #2563EB); color: white;
+      font-size: 15px; font-weight: 700; transition: opacity 0.2s;
+    }
+    .login-submit:hover { opacity: 0.9; }
+    .login-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .login-footer { text-align: center; margin-top: 24px; font-size: 11px; color: #9CA3AF; }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
