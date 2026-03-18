@@ -41,6 +41,9 @@ function showScreen(id) {
     return;
   }
 
+  // 화면 전환 시 이전 TTS 즉시 중단
+  speechSynthesis?.cancel();
+
   document.querySelectorAll(".screen").forEach((s) =>
     s.classList.remove("active", "fade-in")
   );
@@ -67,26 +70,52 @@ function flash() {
   o.classList.add("flash");
 }
 
+// TTS 미지원 언어(th/km)는 영어 텍스트 + en-US 음성으로 대체
+const TTS_FALLBACK = new Set(["th", "km"]);
+
+// 모바일/태블릿에서 speechSynthesis는 사용자 제스처 컨텍스트 안에서만 동작한다.
+// 첫 터치 시 빈 utterance를 발화하여 TTS 엔진을 unlock 해둔다.
+let _ttsUnlocked = false;
+function _unlockTTS() {
+  if (_ttsUnlocked || !window.speechSynthesis) return;
+  const u = new SpeechSynthesisUtterance("");
+  u.volume = 0;
+  speechSynthesis.speak(u);
+  _ttsUnlocked = true;
+}
+document.addEventListener("click", _unlockTTS, { once: true });
+document.addEventListener("touchstart", _unlockTTS, { once: true });
+
 function speak(text, repeat = 1) {
   if (!window.speechSynthesis) return;
   speechSynthesis.cancel();
   const langMap = {
     ko: "ko-KR", en: "en-US", zh: "zh-CN", vi: "vi-VN",
-    th: "th-TH", km: "km-KH", mn: "mn-MN", ru: "ru-RU", id: "id-ID",
+    th: "en-US", km: "en-US",
   };
-  let count = 0;
-  function fire() {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = langMap[state.lang] || "ko-KR";
-    u.rate = 0.95;
-    u.onend = () => { count++; if (count < repeat) fire(); };
-    speechSynthesis.speak(u);
-  }
-  fire();
+  // Chrome에서 cancel() 직후 speak()하면 무시되는 버그 대응
+  setTimeout(() => {
+    let count = 0;
+    function fire() {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = langMap[state.lang] || "ko-KR";
+      u.rate = 0.95;
+      u.onend = () => { count++; if (count < repeat) fire(); };
+      speechSynthesis.speak(u);
+    }
+    fire();
+  }, 60);
 }
 
+/** 화면 표시용 — 현재 언어의 텍스트 반환 */
 function t(key) {
   return (T[state.lang] || T["ko"])[key] || "";
+}
+
+/** TTS용 — th/km이면 영어 텍스트 반환, 나머지는 네이티브 */
+function tt(key) {
+  const lang = TTS_FALLBACK.has(state.lang) ? "en" : state.lang;
+  return (T[lang] || T["ko"])[key] || "";
 }
 
 function delay(ms) {
@@ -108,6 +137,18 @@ function resetToLang() {
 }
 
 /* ── 카메라 관리 ─────────────────────────────── */
+
+// 현재 카메라 방향 — "environment"(후면) 또는 "user"(전면)
+let cameraFacing = "environment";
+
+/** 전면/후면 카메라를 전환한다. */
+async function toggleCamera() {
+  cameraFacing = cameraFacing === "environment" ? "user" : "environment";
+  // 기존 스트림 정리 후 재시작
+  stopCamera();
+  await startCamera();
+}
+
 async function startCamera() {
   const video   = $("cam-video");
   const loading = $("cam-loading");
@@ -118,9 +159,8 @@ async function startCamera() {
   if (video)   video.style.display   = "none";
 
   try {
-    // 후면 카메라 우선 (모바일), 없으면 전면
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } },
+      video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1280 } },
       audio: false,
     });
     state.stream = stream;
@@ -221,9 +261,17 @@ async function callDetectAPI() {
 
     // retry — Face API에서 정면 아님 판정 → MediaPipe 루프 재시작
     if (result.status === "retry") {
-      _updateProgressLabel("정면 재확인 필요");
-      speak(result.message || "정면을 바라봐 주세요");
-      _updateFaceGuide("not_frontal");
+      const reason = result.message || "";
+      // 얼굴 2개 이상 감지 시 별도 안내
+      if (reason.includes("2개 이상")) {
+        _updateProgressLabel("다시 촬영합니다");
+        speak(t("multiFaceWarn"));
+        _updateFaceGuide("multi_face");
+      } else {
+        _updateProgressLabel("정면 재확인 필요");
+        speak(reason || tt("scanMessage"));
+        _updateFaceGuide("not_frontal");
+      }
       // 스캔 화면 유지, 웹캠 다시 표시 + MediaPipe 루프 재시작
       const webcam = $("webcam");
       const canvas = $("captureCanvas");
@@ -308,8 +356,8 @@ function showPassScreen() {
   $("next-native").textContent = t("nextBtn");
   $("next-ko").textContent     = state.lang !== "ko" ? "다음 작업자" : "";
 
-  speak(t("ttsPassed") + ". " + t("passMsg"));
   showScreen("screen-pass");
+  speak(tt("ttsPassed") + ". " + tt("passMsg"));
   startAutoReset();
 }
 
@@ -398,8 +446,13 @@ function showFailScreen({ helmetOk, vestOk, needsAdmin }) {
     $("escalation-box").style.display = "none";
   }
 
-  speak(t("ttsFailed") + ". " + t("failMsg"), 3);
   showScreen("screen-fail");
+  // 실패 시 1회만 재생, 에스컬레이션이면 관리자 호출 메시지 TTS
+  if (needsAdmin) {
+    speak(tt("escalationNative"));
+  } else {
+    speak(tt("ttsFailed") + ". " + tt("failMsg"));
+  }
 }
 
 /* ══════════════════════════════════════════════
@@ -431,9 +484,31 @@ if ($("lang-grid")) {
   function selectLang(code, cc) {
     state.lang = code;
     state.pin = "";
-    speak((T[code] || T["ko"]).greeting);
     initPinScreen(cc);
+    // 선택 언어에 맞춰 사번 로그인 링크 텍스트 갱신
+    const empLink = $("link-emp-login");
+    if (empLink) empLink.textContent = t("empPinPrompt");
     showScreen("screen-pin");
+    // greeting 재생 후 pinPrompt 순서대로 TTS (showScreen 이후 호출)
+    // th/km은 영어 텍스트로 대체
+    const ttsLang = TTS_FALLBACK.has(code) ? T["en"] : (T[code] || T["ko"]);
+    if (window.speechSynthesis) {
+      const langMap = {
+        ko: "ko-KR", en: "en-US", zh: "zh-CN", vi: "vi-VN",
+        th: "en-US", km: "en-US",
+      };
+      const ttsCode = langMap[code] || "ko-KR";
+      const uGreeting = new SpeechSynthesisUtterance(ttsLang.greeting);
+      uGreeting.lang = ttsCode;
+      uGreeting.rate = 0.95;
+      uGreeting.onend = () => {
+        const uPin = new SpeechSynthesisUtterance(ttsLang.pinPrompt);
+        uPin.lang = ttsCode;
+        uPin.rate = 0.95;
+        speechSynthesis.speak(uPin);
+      };
+      speechSynthesis.speak(uGreeting);
+    }
   }
 
   /* ── PIN 입력 ────────────────────────────────── */
@@ -513,6 +588,8 @@ if ($("lang-grid")) {
 
       initReadyScreen();
       showScreen("screen-ready");
+      // 로그인 직후 착용 확인 안내 TTS
+      speak(tt("checkMessage"));
       startCamera();
     } catch (err) {
       console.error("로그인 실패:", err);
@@ -557,22 +634,25 @@ if ($("lang-grid")) {
   /* ── 스캔 화면 ───────────────────────────────── */
   function initScanScreen() {
     $("scan-label-native").textContent = t("scanLabel");
-    $("scan-label-ko").textContent     = state.lang !== "ko" ? "PPE 착용 상태를 확인하고 있습니다" : "";
+    $("scan-label-ko").textContent     = state.lang !== "ko" ? "착용 상태를 확인하고 있습니다." : "";
 
     $("status-helmet-native").textContent = t("helmetName");
     $("status-helmet-ko").textContent     = state.lang !== "ko" ? "안전모" : "";
     $("status-vest-native").textContent   = t("vestName");
     $("status-vest-ko").textContent       = state.lang !== "ko" ? "안전조끼" : "";
 
-    $("box-helmet-label").textContent = t("helmetName");
-    $("box-vest-label").textContent   = t("vestName");
-
     // 캡처 이미지 초기화
     const preview = $("scan-preview");
     if (preview) { preview.src = ""; preview.style.display = "none"; }
     document.querySelector(".scan-view")?.classList.remove("webcam-active");
 
-    ["box-helmet", "box-vest"].forEach((id) => $(id).classList.remove("detected", "missing"));
+    // 가이드 프레임 초기화
+    const guide = $("body-guide");
+    if (guide) {
+      guide.className = "body-guide guide-no-face";
+      const lbl = guide.querySelector(".body-guide-label");
+      if (lbl) lbl.textContent = "상반신을 프레임 안에 맞춰주세요";
+    }
     ["status-helmet", "status-vest"].forEach((id) => {
       const el = $(id);
       el.className = "ppe-status scanning";
@@ -612,6 +692,8 @@ if ($("lang-grid")) {
     flash();
     initScanScreen();
     showScreen("screen-scanning");
+    // 스캔 시작 시 자세 안내 TTS
+    speak(tt("scanMessage"));
 
     // 스캔 화면 웹캠 시작 + MediaPipe 정면 감지 → 자동 캡처 → API 호출
     _startScanWithFaceGuide();
@@ -658,37 +740,52 @@ if ($("lang-grid")) {
     );
   }
 
-  /** 얼굴 감지 가이드 메시지 업데이트 */
+  /** 얼굴 감지 가이드 메시지 + 가이드 프레임 업데이트 */
   function _updateFaceGuide(status) {
     const el = $("face-guide-msg");
     const label = $("prog-label");
-    if (!el) return;
+    const guide = $("body-guide");
+    const guideLbl = guide?.querySelector(".body-guide-label");
 
-    el.className = "face-guide-msg";
+    // 하단 텍스트 메시지
+    if (el) el.className = "face-guide-msg";
+    // 가이드 프레임 상태 초기화
+    if (guide) guide.className = "body-guide";
 
     switch (status) {
       case "no_face":
-        el.textContent = "카메라를 봐주세요";
-        el.classList.add("guide-error");
+        if (el) { el.textContent = "카메라를 봐주세요"; el.classList.add("guide-error"); }
+        if (guide) guide.classList.add("guide-no-face");
+        if (guideLbl) guideLbl.textContent = "프레임 안에 상반신을 맞춰주세요";
         if (label) label.textContent = "얼굴 감지 대기";
         break;
       case "too_close":
-        el.textContent = "뒤로 물러나 상반신이 보이게 해주세요";
-        el.classList.add("guide-warn");
+        if (el) { el.textContent = "뒤로 물러나 상반신이 보이게 해주세요"; el.classList.add("guide-warn"); }
+        if (guide) guide.classList.add("guide-warn");
+        if (guideLbl) guideLbl.textContent = "뒤로 물러나주세요";
         if (label) label.textContent = "상반신 확인 중";
         break;
       case "not_frontal":
-        el.textContent = "정면을 봐주세요";
-        el.classList.add("guide-warn");
+        if (el) { el.textContent = "정면을 봐주세요"; el.classList.add("guide-warn"); }
+        if (guide) guide.classList.add("guide-warn");
+        if (guideLbl) guideLbl.textContent = "정면을 봐주세요";
         if (label) label.textContent = "정면 확인 중";
         break;
+      case "multi_face":
+        if (el) { el.textContent = t("multiFaceWarn"); el.classList.add("guide-warn"); }
+        if (guide) guide.classList.add("guide-warn");
+        if (guideLbl) guideLbl.textContent = "한 명만 촬영해주세요";
+        if (label) label.textContent = "다시 촬영합니다";
+        break;
       case "frontal":
-        el.textContent = "정면 확인!";
-        el.classList.add("guide-ok");
+        if (el) { el.textContent = "정면 확인!"; el.classList.add("guide-ok"); }
+        if (guide) guide.classList.add("guide-ok");
+        if (guideLbl) guideLbl.textContent = "촬영 중...";
         break;
       case "captured":
-        el.textContent = "촬영 완료 — 분석 중...";
-        el.classList.add("guide-ok");
+        if (el) { el.textContent = "촬영 완료 — 분석 중..."; el.classList.add("guide-ok"); }
+        if (guide) guide.classList.add("guide-ok");
+        if (guideLbl) guideLbl.textContent = "분석 중...";
         break;
     }
   }
@@ -730,6 +827,8 @@ if ($("lang-grid")) {
       history.replaceState(null, "", location.pathname);
       initReadyScreen();
       showScreen("screen-ready");
+      // 사번 로그인 복귀 시에도 착용 확인 안내 TTS
+      speak(tt("checkMessage"));
       startCamera();
       return;
     }
@@ -750,7 +849,9 @@ if ($("emp-input")) {
   const btnBack = $("btn-back");
   const msgEl = $("emp-msg");
 
+  // 숫자만 허용 — 문자 입력 필터링
   empInput.addEventListener("input", () => {
+    empInput.value = empInput.value.replace(/[^0-9]/g, "");
     btnLogin.disabled = empInput.value.trim().length === 0;
   });
 

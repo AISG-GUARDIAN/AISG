@@ -21,8 +21,6 @@ class Settings(BaseSettings):
         AZURE_FACE_API: Azure Face API 엔드포인트
         AZURE_FACE_KEY: Azure Face API 키
         관리자 목록에서 오늘 등록된 작업자만 필터링
-        AZURE_BLOB_CONNECTION_STRING: Azure Blob Storage 연결 문자열
-        AZURE_BLOB_CONTAINER: Blob 컨테이너 이름
         AZURE_OPENAI_ENDPOINT: Azure OpenAI 엔드포인트
         AZURE_OPENAI_KEY: Azure OpenAI API 키
         AZURE_OPENAI_DEPLOYMENT: Azure OpenAI 배포 모델명
@@ -42,10 +40,6 @@ class Settings(BaseSettings):
     AZURE_CUSTOM_VISION_PUBLISH_NAME: str = "Iteration1"
     AZURE_FACE_API: str = ""
     AZURE_FACE_KEY: str = ""
-
-    # Azure Blob Storage
-    AZURE_BLOB_CONNECTION_STRING: str = ""
-    AZURE_BLOB_CONTAINER: str = "safety-images"
 
     # Azure OpenAI (보고서 생성)
     AZURE_OPENAI_ENDPOINT: str = ""
