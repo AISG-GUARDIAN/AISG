@@ -73,6 +73,10 @@ def detect_frontal_face(image_data: bytes) -> dict:
         if not faces:
             return {"is_frontal": False, "face_rects": [], "reason": "얼굴이 감지되지 않았습니다"}
 
+        if len(faces) > 1:
+            logger.warning(f'감지된 얼굴이 {len(faces)}개로 인해 검사를 진행할 수 없습니다.')
+            return {"is_frontal": False, "face_rects": [], "reason": "얼굴이 2개 이상 감지되어 검사를 진행하지 않습니다."}
+
         # [수정] 감지된 모든 얼굴 처리
         face_rects = []
         for face in faces:
