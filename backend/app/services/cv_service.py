@@ -14,9 +14,6 @@ import logging
 
 import httpx
 from PIL import Image, ImageFilter
-from azure.cognitiveservices.vision.face import FaceClient
-from azure.cognitiveservices.vision.face.models import FaceAttributeType
-from msrest.authentication import CognitiveServicesCredentials
 
 from app.core.config import get_settings
 
@@ -24,21 +21,12 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# 1단계: Face API — 정면 얼굴 감지
+# 1단계: Face API — 정면 얼굴 감지 (REST API)
 # ---------------------------------------------------------------------------
-
-def _get_face_client() -> FaceClient:
-    """Azure Face API 클라이언트를 생성한다."""
-    settings = get_settings()
-    return FaceClient(
-        endpoint=settings.AZURE_FACE_API,
-        credentials=CognitiveServicesCredentials(settings.AZURE_FACE_KEY),
-    )
-
 
 def detect_frontal_face(image_data: bytes) -> dict:
     """
-    이미지에서 정면 얼굴을 감지한다.
+    Azure Face API REST 호출로 정면 얼굴을 감지한다.
 
     Args:
         image_data: 이미지 바이너리 데이터
@@ -46,7 +34,7 @@ def detect_frontal_face(image_data: bytes) -> dict:
     Returns:
         dict: {
             "is_frontal": bool — 정면 여부,
-            "face_rect": dict | None — {"left", "top", "width", "height"},
+            "face_rects": list[dict] — [{"left", "top", "width", "height"}, ...],
             "reason": str — 실패 사유 (성공 시 빈 문자열),
         }
     """
@@ -58,49 +46,49 @@ def detect_frontal_face(image_data: bytes) -> dict:
         return {"is_frontal": True, "face_rects": [], "reason": ""}
 
     try:
-        client = _get_face_client()
-        stream = io.BytesIO(image_data)
-
-        # 얼굴 감지 + headPose 속성 요청
-        faces = client.face.detect_with_stream(
-            image=stream,
-            return_face_id=False,
-            return_face_attributes=[FaceAttributeType.head_pose],
-            recognition_model="recognition_04",
-            detection_model="detection_03",
+        base = settings.AZURE_FACE_API.rstrip("/")
+        url = (
+            f"{base}/face/v1.0/detect"
+            f"?returnFaceId=false"
+            f"&returnFaceAttributes=headPose"
+            f"&recognitionModel=recognition_04"
+            f"&detectionModel=detection_03"
         )
+        headers = {
+            "Ocp-Apim-Subscription-Key": settings.AZURE_FACE_KEY,
+            "Content-Type": "application/octet-stream",
+        }
+
+        resp = httpx.post(url, headers=headers, content=image_data, timeout=30.0)
+        resp.raise_for_status()
+        faces = resp.json()
 
         if not faces:
             return {"is_frontal": False, "face_rects": [], "reason": "얼굴이 감지되지 않았습니다"}
 
-        # [수정] 감지된 모든 얼굴 처리
+        if len(faces) > 1:
+            logger.warning(f"감지된 얼굴이 {len(faces)}개로 인해 검사를 진행할 수 없습니다.")
+            return {"is_frontal": False, "face_rects": [], "reason": "얼굴이 2개 이상 감지되어 검사를 진행하지 않습니다."}
+
+        # 감지된 얼굴 좌표 추출
         face_rects = []
         for face in faces:
-            rect = face.face_rectangle
+            rect = face["faceRectangle"]
             face_rects.append({
-                "left": rect.left,
-                "top": rect.top,
-                "width": rect.width,
-                "height": rect.height,
+                "left": rect["left"],
+                "top": rect["top"],
+                "width": rect["width"],
+                "height": rect["height"],
             })
 
         # 정면 판정 기준: yaw(좌우) ±20°, pitch(상하) ±20°
-        main_face = faces[0]
-        head_pose = main_face.face_attributes.head_pose
-        is_frontal = abs(head_pose.yaw) <= 20 and abs(head_pose.pitch) <= 20
-
-        rect = face.face_rectangle
-        face_rect = {
-            "left": rect.left,
-            "top": rect.top,
-            "width": rect.width,
-            "height": rect.height,
-        }
+        head_pose = faces[0]["faceAttributes"]["headPose"]
+        is_frontal = abs(head_pose["yaw"]) <= 20 and abs(head_pose["pitch"]) <= 20
 
         if not is_frontal:
             return {
                 "is_frontal": False,
-                "face_rects": face_rects, # 실패해도 모자이크 처리를 위해 전체 좌표 반환
+                "face_rects": face_rects,
                 "reason": "정면을 바라봐 주세요",
             }
 
