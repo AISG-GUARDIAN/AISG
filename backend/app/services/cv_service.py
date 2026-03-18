@@ -55,7 +55,7 @@ def detect_frontal_face(image_data: bytes) -> dict:
     # Face API 키 미설정 — 개발 모드
     if not settings.AZURE_FACE_KEY:
         logger.warning("Azure Face API 키 미설정 — 개발 모드(정면 판정 스킵)")
-        return {"is_frontal": True, "face_rect": None, "reason": ""}
+        return {"is_frontal": True, "face_rects": [], "reason": ""}
 
     try:
         client = _get_face_client()
@@ -71,13 +71,26 @@ def detect_frontal_face(image_data: bytes) -> dict:
         )
 
         if not faces:
-            return {"is_frontal": False, "face_rect": None, "reason": "얼굴이 감지되지 않았습니다"}
+            return {"is_frontal": False, "face_rects": [], "reason": "얼굴이 감지되지 않았습니다"}
 
-        # 첫 번째 얼굴 사용 (1인 촬영 가정)
-        face = faces[0]
-        head_pose = face.face_attributes.head_pose
+        if len(faces) > 1:
+            logger.warning(f'감지된 얼굴이 {len(faces)}개로 인해 검사를 진행할 수 없습니다.')
+            return {"is_frontal": False, "face_rects": [], "reason": "얼굴이 2개 이상 감지되어 검사를 진행하지 않습니다."}
+
+        # [수정] 감지된 모든 얼굴 처리
+        face_rects = []
+        for face in faces:
+            rect = face.face_rectangle
+            face_rects.append({
+                "left": rect.left,
+                "top": rect.top,
+                "width": rect.width,
+                "height": rect.height,
+            })
 
         # 정면 판정 기준: yaw(좌우) ±20°, pitch(상하) ±20°
+        main_face = faces[0]
+        head_pose = main_face.face_attributes.head_pose
         is_frontal = abs(head_pose.yaw) <= 20 and abs(head_pose.pitch) <= 20
 
         rect = face.face_rectangle
@@ -91,22 +104,22 @@ def detect_frontal_face(image_data: bytes) -> dict:
         if not is_frontal:
             return {
                 "is_frontal": False,
-                "face_rect": face_rect,
+                "face_rects": face_rects, # 실패해도 모자이크 처리를 위해 전체 좌표 반환
                 "reason": "정면을 바라봐 주세요",
             }
 
-        return {"is_frontal": True, "face_rect": face_rect, "reason": ""}
+        return {"is_frontal": True, "face_rects": face_rects, "reason": ""}
 
     except Exception as e:
         logger.error(f"Face API 호출 실패: {e}", exc_info=True)
-        return {"is_frontal": False, "face_rect": None, "reason": f"얼굴 감지 오류: {e}"}
+        return {"is_frontal": False, "face_rects": [], "reason": f"얼굴 감지 오류: {e}"}
 
 
 # ---------------------------------------------------------------------------
 # 2단계: 모자이크 처리 — 개인정보 보호
 # ---------------------------------------------------------------------------
 
-def mosaic_face(image_data: bytes, face_rect: dict) -> bytes:
+def mosaic_face(image_data: bytes, face_rects: list) -> bytes:
     """
     얼굴 영역을 모자이크(픽셀화) 처리한다.
 
@@ -119,20 +132,29 @@ def mosaic_face(image_data: bytes, face_rect: dict) -> bytes:
     """
     img = Image.open(io.BytesIO(image_data))
 
-    left = face_rect["left"]
-    top = face_rect["top"]
-    right = left + face_rect["width"]
-    bottom = top + face_rect["height"]
+    # 🚀 [핵심 수정] 리스트 안의 모든 얼굴 좌표를 꺼내어 순회하며 모자이크 적용
+    for rect in face_rects:
+        left = rect["left"]
+        top = rect["top"]
+        width = rect["width"]
+        height = rect["height"]
+        
+        right = left + width
+        bottom = top + height
 
-    # 얼굴 영역 크롭 → 축소 → 확대 (픽셀화 효과)
-    face_region = img.crop((left, top, right, bottom))
-    small = face_region.resize(
-        (max(1, face_rect["width"] // 10), max(1, face_rect["height"] // 10)),
-        resample=Image.BILINEAR,
-    )
-    mosaic = small.resize(face_region.size, resample=Image.NEAREST)
+        # 좌표가 이미지 밖을 벗어나지 않도록 안전장치
+        left, top = max(0, left), max(0, top)
+        right, bottom = min(img.width, right), min(img.height, bottom)
 
-    img.paste(mosaic, (left, top, right, bottom))
+        # 얼굴 영역 크롭 → 축소 → 확대 (픽셀화 효과)
+        face_region = img.crop((left, top, right, bottom))
+        small = face_region.resize(
+            (max(1, width // 10), max(1, height // 10)),
+            resample=Image.BILINEAR,
+        )
+        mosaic = small.resize(face_region.size, resample=Image.NEAREST)
+
+        img.paste(mosaic, (left, top, right, bottom))
 
     # JPEG 바이트로 변환
     buf = io.BytesIO()
@@ -285,17 +307,18 @@ def analyze_safety_image(image_data: bytes) -> dict:
             "helmet_pass": None,
             "vest_pass": None,
             "cv_confidence": 0.0,
-            "face_detected": False,
+            "face_detected": len(face_result.get("face_rects", [])) > 0,
             "retry_reason": face_result["reason"],
         }
 
-    # 2단계: 모자이크 처리 (얼굴 좌표가 있을 때만)
-    if face_result["face_rect"]:
-        processed_image = mosaic_face(image_data, face_result["face_rect"])
-        logger.info(f"[2단계 모자이크] 완료 — 얼굴 영역: {face_result['face_rect']}")
+    # 2단계: [수정] face_rects 리스트를 받아 모든 얼굴을 모자이크 처리
+    face_rects = face_result.get("face_rects", [])
+    if face_rects:
+        processed_image = mosaic_face(image_data, face_rects)
+        logger.info(f"[2단계 모자이크] 완료 — 처리된 얼굴 수: {len(face_rects)}명")
     else:
         processed_image = image_data
-        logger.info("[2단계 모자이크] 스킵 — 개발 모드 (face_rect 없음)")
+        logger.info("[2단계 모자이크] 스킵 — 얼굴 없음")
 
     # 3단계: Custom Vision 판별
     safety_result = analyze_safety_equipment(processed_image)
