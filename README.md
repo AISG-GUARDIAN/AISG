@@ -18,35 +18,30 @@ git clone https://github.com/your-team/connecting-bridge.git
 cd connecting-bridge
 ```
 
-2. Backend 설정
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-3. 환경 변수 설정
+2. 환경 변수 설정
 `.env` 파일을 생성하고 필요한 API 키를 설정합니다
-```
-OPENAI_API_KEY=your_api_key_here
-```
 
-4. Backend 서버 실행
+
+3. Backend 서버 실행
 ```bash
 > pip을 사용하셔서 가상환경을 쓰시던 아님 uv를 쓰시던 상관없습니다.
+
+# 백엔드 폴더로 이동
+cd backend
 
 pip install -r backend/requirements.txt
 또는 
 uv pip install -r backend/requirements.txt
 
-cd backend
+# 백엔드 서버 실행
 uvicorn app.main:app --reload 
 또는
 uv run uvicorn app.main:app --reload
 ```
 
-5. 브라우저에서 `http://localhost:8000` 접속
+4. 브라우저에서 `http://localhost:8000` 접속
 
-6. 테스트용 시드 데이터 삽입
+5. 테스트용 시드 데이터 삽입
 ```bash
 python test_seed.py
 ```

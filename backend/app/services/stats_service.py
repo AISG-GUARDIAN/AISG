@@ -5,13 +5,18 @@
 
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import case, extract, func
+from sqlalchemy import case, extract, func, or_
 from sqlalchemy.orm import Session
 
 from app.models.check_session import CheckSession
 from app.models.employee import Employee
 from app.models.group import Group
 from app.models.user import User
+
+
+def _in_groups_or_unassigned(group_id_col, admin_group_ids):
+    """관리자 소속 그룹이거나 그룹 미배정인 레코드를 포함하는 필터 조건."""
+    return or_(group_id_col.in_(admin_group_ids), group_id_col.is_(None))
 
 
 def get_dashboard_stats(db: Session, admin_id: int) -> dict:
@@ -27,21 +32,25 @@ def get_dashboard_stats(db: Session, admin_id: int) -> dict:
         dict: { total_users, today_checked, today_pass, today_fail, pass_rate }
     """
     today = date.today()
+    admin_group_ids = [
+        g.id for g in db.query(Group).filter(Group.admin_id == admin_id).all()
+    ]
 
-    # 관리자 소속 그룹의 작업자 수
+    # 관리자 소속 그룹 + 미배정 작업자 수
     total_users = (
         db.query(func.count(User.id))
-        .join(Group, User.group_id == Group.id)
-        .filter(Group.admin_id == admin_id)
+        .filter(_in_groups_or_unassigned(User.group_id, admin_group_ids))
         .scalar()
     ) or 0
 
-    # 오늘의 체크인 세션 (관리자 소속 그룹 기준)
+    # 오늘의 체크인 세션 (관리자 소속 그룹 + 미배정 포함)
     today_base = (
         db.query(CheckSession)
         .join(User, CheckSession.user_id == User.id)
-        .join(Group, User.group_id == Group.id)
-        .filter(Group.admin_id == admin_id, CheckSession.date == today)
+        .filter(
+            _in_groups_or_unassigned(User.group_id, admin_group_ids),
+            CheckSession.date == today,
+        )
     )
 
     today_checked = today_base.count()
@@ -158,13 +167,15 @@ def get_period_stats(
 
 
 def _count_sessions(db: Session, admin_id: int, start: date, end: date) -> dict:
-    """start~end 기간의 세션 수를 집계한다."""
+    """start~end 기간의 세션 수를 집계한다. 그룹 미배정 유저도 포함."""
+    admin_group_ids = [
+        g.id for g in db.query(Group).filter(Group.admin_id == admin_id).all()
+    ]
     base = (
         db.query(CheckSession)
         .join(User, CheckSession.user_id == User.id)
-        .join(Group, User.group_id == Group.id)
         .filter(
-            Group.admin_id == admin_id,
+            _in_groups_or_unassigned(User.group_id, admin_group_ids),
             CheckSession.date >= start,
             CheckSession.date <= end,
         )
@@ -260,17 +271,17 @@ def _admin_base_query(db: Session, admin_id: int, target_date: date):
         g.id for g in db.query(Group).filter(Group.admin_id == admin_id).all()
     ]
 
-    # User 세션 ID
+    # User 세션 ID (그룹 미배정 포함)
     user_session_ids = (
         db.query(CheckSession.id)
         .join(User, CheckSession.user_id == User.id)
-        .filter(User.group_id.in_(admin_group_ids), CheckSession.date == target_date)
+        .filter(_in_groups_or_unassigned(User.group_id, admin_group_ids), CheckSession.date == target_date)
     )
-    # Employee 세션 ID
+    # Employee 세션 ID (그룹 미배정 포함)
     emp_session_ids = (
         db.query(CheckSession.id)
         .join(Employee, CheckSession.employee_id == Employee.id)
-        .filter(Employee.group_id.in_(admin_group_ids), CheckSession.date == target_date)
+        .filter(_in_groups_or_unassigned(Employee.group_id, admin_group_ids), CheckSession.date == target_date)
     )
     # UNION
     all_ids = user_session_ids.union(emp_session_ids).subquery()
@@ -376,7 +387,7 @@ def get_full_dashboard(db: Session, admin_id: int) -> dict:
             )).label("fail_cnt"),
         )
         .join(CheckSession, CheckSession.user_id == User.id)
-        .filter(CheckSession.date == today, User.group_id.in_(admin_group_ids))
+        .filter(CheckSession.date == today, _in_groups_or_unassigned(User.group_id, admin_group_ids))
         .group_by(User.language)
         .all()
     )
@@ -390,7 +401,7 @@ def get_full_dashboard(db: Session, admin_id: int) -> dict:
             )).label("fail_cnt"),
         )
         .join(CheckSession, CheckSession.employee_id == Employee.id)
-        .filter(CheckSession.date == today, Employee.group_id.in_(admin_group_ids))
+        .filter(CheckSession.date == today, _in_groups_or_unassigned(Employee.group_id, admin_group_ids))
         .group_by(Employee.language)
         .all()
     )
@@ -457,12 +468,12 @@ def get_full_dashboard(db: Session, admin_id: int) -> dict:
     month_user_ids = (
         db.query(CheckSession.id)
         .join(User, CheckSession.user_id == User.id)
-        .filter(User.group_id.in_(admin_group_ids), CheckSession.date >= first_of_month, CheckSession.date <= today)
+        .filter(_in_groups_or_unassigned(User.group_id, admin_group_ids), CheckSession.date >= first_of_month, CheckSession.date <= today)
     )
     month_emp_ids = (
         db.query(CheckSession.id)
         .join(Employee, CheckSession.employee_id == Employee.id)
-        .filter(Employee.group_id.in_(admin_group_ids), CheckSession.date >= first_of_month, CheckSession.date <= today)
+        .filter(_in_groups_or_unassigned(Employee.group_id, admin_group_ids), CheckSession.date >= first_of_month, CheckSession.date <= today)
     )
     month_all_ids = month_user_ids.union(month_emp_ids).subquery()
 
@@ -491,7 +502,7 @@ def get_full_dashboard(db: Session, admin_id: int) -> dict:
             func.count(CheckSession.id).label("cnt"),
         )
         .join(User, CheckSession.user_id == User.id)
-        .filter(User.group_id.in_(admin_group_ids), CheckSession.date >= first_of_month, CheckSession.date <= today)
+        .filter(_in_groups_or_unassigned(User.group_id, admin_group_ids), CheckSession.date >= first_of_month, CheckSession.date <= today)
         .group_by("d", User.language)
         .all()
     )
@@ -503,7 +514,7 @@ def get_full_dashboard(db: Session, admin_id: int) -> dict:
             func.count(CheckSession.id).label("cnt"),
         )
         .join(Employee, CheckSession.employee_id == Employee.id)
-        .filter(Employee.group_id.in_(admin_group_ids), CheckSession.date >= first_of_month, CheckSession.date <= today)
+        .filter(_in_groups_or_unassigned(Employee.group_id, admin_group_ids), CheckSession.date >= first_of_month, CheckSession.date <= today)
         .group_by("d", Employee.language)
         .all()
     )
@@ -535,12 +546,12 @@ def get_full_dashboard(db: Session, admin_id: int) -> dict:
     year_user_ids = (
         db.query(CheckSession.id)
         .join(User, CheckSession.user_id == User.id)
-        .filter(User.group_id.in_(admin_group_ids), CheckSession.date >= year_start, CheckSession.date <= today)
+        .filter(_in_groups_or_unassigned(User.group_id, admin_group_ids), CheckSession.date >= year_start, CheckSession.date <= today)
     )
     year_emp_ids = (
         db.query(CheckSession.id)
         .join(Employee, CheckSession.employee_id == Employee.id)
-        .filter(Employee.group_id.in_(admin_group_ids), CheckSession.date >= year_start, CheckSession.date <= today)
+        .filter(_in_groups_or_unassigned(Employee.group_id, admin_group_ids), CheckSession.date >= year_start, CheckSession.date <= today)
     )
     year_all_ids = year_user_ids.union(year_emp_ids).subquery()
 
@@ -569,7 +580,7 @@ def get_full_dashboard(db: Session, admin_id: int) -> dict:
             func.count(CheckSession.id).label("cnt"),
         )
         .join(User, CheckSession.user_id == User.id)
-        .filter(User.group_id.in_(admin_group_ids), CheckSession.date >= year_start, CheckSession.date <= today)
+        .filter(_in_groups_or_unassigned(User.group_id, admin_group_ids), CheckSession.date >= year_start, CheckSession.date <= today)
         .group_by("m", User.language)
         .all()
     )
@@ -580,7 +591,7 @@ def get_full_dashboard(db: Session, admin_id: int) -> dict:
             func.count(CheckSession.id).label("cnt"),
         )
         .join(Employee, CheckSession.employee_id == Employee.id)
-        .filter(Employee.group_id.in_(admin_group_ids), CheckSession.date >= year_start, CheckSession.date <= today)
+        .filter(_in_groups_or_unassigned(Employee.group_id, admin_group_ids), CheckSession.date >= year_start, CheckSession.date <= today)
         .group_by("m", Employee.language)
         .all()
     )

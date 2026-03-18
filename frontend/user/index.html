@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Safe Guardian — Worker Check-In</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="../assets/css/user-style.css" />
 </head>
 
 <body>
@@ -59,7 +59,7 @@
           <button id="btn-confirm-pin" class="btn-primary" disabled>0 / 4 자리 입력 중</button>
         </div>
         <p class="caption" style="margin-top:20px">입력 정보는 저장되지 않습니다</p>
-        <a id="link-emp-login" href="#" class="emp-login-link">사원번호가 있으신가요?</a>
+        <a id="link-emp-login" href="#" class="emp-login-link"></a>
       </section>
 
       <!-- ③ 카메라 준비 -->
@@ -69,6 +69,14 @@
         <p id="ready-greeting-ko" class="bilingual-ko"></p>
 
         <div class="cam-view" id="cam-view-box">
+          <!-- 카메라 전환 버튼 -->
+          <button id="btn-toggle-cam" onclick="toggleCamera()" style="
+            position:absolute; top:10px; right:10px; z-index:10;
+            width:40px; height:40px; border-radius:50%;
+            background:rgba(0,0,0,0.5); border:none; cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+            color:#fff; font-size:20px;
+          " title="카메라 전환">🔄</button>
           <!-- 카메라 로딩 중 -->
           <div id="cam-loading" class="cam-placeholder">
             <div class="cam-icon">📷</div>
@@ -125,15 +133,9 @@
           <!-- 실시간 웹캠 피드 -->
           <video id="webcam" autoplay playsinline muted></video>
           <canvas id="overlay"></canvas>
-          <div class="person-silhouette">
-            <div class="person-head"></div>
-            <div class="person-body"></div>
-          </div>
-          <div id="box-helmet" class="ppe-box-overlay helmet">
-            <span id="box-helmet-label" class="box-label"></span>
-          </div>
-          <div id="box-vest" class="ppe-box-overlay vest">
-            <span id="box-vest-label" class="box-label"></span>
+          <!-- 미디어파이프 인식용 상반신 가이드 프레임 -->
+          <div id="body-guide" class="body-guide">
+            <div class="body-guide-label">상반신을 프레임 안에 맞춰주세요</div>
           </div>
           <div id="scan-line" class="scan-line"></div>
           <!-- 얼굴 감지 가이드 오버레이 -->

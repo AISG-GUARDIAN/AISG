@@ -100,27 +100,59 @@ let hourlyFailData = [];
 // 3. 대시보드 초기화 — API 호출 후 모든 위젯 렌더
 // ════════════════════════════════════════════════════════════
 
+let dashCacheTime = 0;              // 마지막 대시보드 fetch 시각 (ms)
+const DASH_CACHE_TTL = 30 * 1000;   // 캐시 유효 시간 30초
+let dashPollTimer = null;           // 대시보드 자동 갱신 타이머
+
+/** 대시보드 캐시를 무효화한다. 다음 initDashboard 호출 시 API를 다시 호출한다. */
+function invalidateDashCache() { dashCacheTime = 0; }
+
+/** 대시보드 페이지 진입 시 30초 폴링을 시작한다. */
+function startDashPolling() {
+  stopDashPolling();
+  dashPollTimer = setInterval(() => {
+    if (api.getAdminToken()) {
+      invalidateDashCache();
+      initDashboard();
+    }
+  }, DASH_CACHE_TTL);
+}
+
+/** 대시보드 페이지 이탈 시 폴링을 중지한다. */
+function stopDashPolling() {
+  if (dashPollTimer) { clearInterval(dashPollTimer); dashPollTimer = null; }
+}
+
 async function initDashboard() {
+  // 캐시가 유효하면 API 재호출 없이 렌더만 수행
+  if (dashData && (Date.now() - dashCacheTime < DASH_CACHE_TTL)) {
+    renderDashboardWidgets();
+    return;
+  }
+
   try {
     dashData = await api.getDashboard();
+    dashCacheTime = Date.now();
   } catch (err) {
     console.error('대시보드 API 호출 실패:', err.message);
-    // 인증 만료 시 로그인 화면으로
     if (err.message.includes('401')) {
       showLoginScreen();
       return;
     }
     dashData = null;
+    dashCacheTime = 0;
   }
 
+  renderDashboardWidgets();
+}
+
+function renderDashboardWidgets() {
   renderKPI();
   renderLanguageDonut();
   renderFailDonut();
   renderHourlyChart();
   renderNationStats();
   buildTableData();
-
-  // 알림 배지 업데이트 (미처리 건수)
   loadNotificationBadge();
 }
 
@@ -457,9 +489,14 @@ function navigate(p) {
   document.getElementById('nav-' + p).classList.add('active');
   document.getElementById('page-title').innerText = titleMap[p][0];
   document.getElementById('page-subtitle').innerText = titleMap[p][1];
+
+  // 대시보드 페이지일 때만 자동 갱신 폴링
+  if (p === 'dashboard') { invalidateDashCache(); initDashboard(); startDashPolling(); }
+  else { stopDashPolling(); }
+
   if (p === 'checkin') { curPage = 1; renderCheckinTable(); }
-  if (p === 'daily') { renderDailyPage(); }
-  if (p === 'monthly') { renderMonthSelector(); }
+  if (p === 'daily') { initDashboard().then(() => renderDailyPage()); }
+  if (p === 'monthly') { initDashboard().then(() => renderMonthSelector()); }
   if (p === 'groups') { loadGroups(); }
   if (p === 'workers') { loadWorkers(); }
   if (p === 'alarm') { loadNotifications(); }
@@ -798,6 +835,7 @@ async function confirmOverride() {
   try {
     const reason = document.getElementById('override-reason').value.trim();
     await api.overrideSession(overrideTargetSessionId, reason);
+    invalidateDashCache();
     closeOverrideModal();
     await loadNotifications();
   } catch (err) {
@@ -1035,6 +1073,7 @@ async function saveGroup() {
     } else {
       await api.createGroup(name);
     }
+    invalidateDashCache();
     closeGroupModal();
     selectedGroupId = null;
     await loadGroups();
@@ -1070,6 +1109,7 @@ async function confirmGroupDelete() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 삭제 중...';
   try {
     await api.deleteGroup(deleteTargetGroupId);
+    invalidateDashCache();
     closeGroupDeleteModal();
     selectedGroupId = null;
     await loadGroups();
@@ -1169,6 +1209,7 @@ async function changeWorkerGroup(type, id, newGroupId) {
     } else {
       await api.updateUser(id, { group_id: gid });
     }
+    invalidateDashCache();
     // 그룹 데이터 갱신 (user_count 변경 반영)
     try { groupsData = await api.getGroups(); } catch {}
     loadWorkers();
@@ -1311,6 +1352,7 @@ async function saveNewEmployee() {
 
   try {
     await api.createEmployee(empNo, lang, groupId ? parseInt(groupId) : null);
+    invalidateDashCache();
     closeAddEmployeeModal();
     loadWorkers();
   } catch (err) {
@@ -1326,6 +1368,7 @@ async function deleteEmployeeConfirm(id, empNo) {
   if (!confirm(`사원 "${empNo}"을(를) 삭제하시겠습니까?`)) return;
   try {
     await api.deleteEmployee(id);
+    invalidateDashCache();
     loadWorkers();
   } catch (err) {
     alert('삭제 실패: ' + err.message);
@@ -1345,6 +1388,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('load', () => {
   if (checkAuth()) {
     initDashboard();
+    startDashPolling();
   }
 
   // 시계
