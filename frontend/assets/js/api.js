@@ -99,6 +99,11 @@ const api = {
         return this._adminFetch("/admin/stats/dashboard");
     },
 
+    /** 체크인 상세 세션 목록 조회 (사원ID, 시도횟수, 언어, 일시, 상태) */
+    async getSessionsDetail() {
+        return this._adminFetch("/admin/stats/sessions-detail");
+    },
+
     /** 체크인 세션 목록 조회 */
     async getAdminSessions(targetDate, groupId) {
         let url = "/admin/sessions";
@@ -235,6 +240,27 @@ const api = {
             const err = await res.json().catch(() => ({}));
             throw new Error(err.detail || `HTTP ${res.status}`);
         }
+    },
+
+    /* ── 보고서 API ── */
+
+    /**
+     * 보고서 생성 요청 — 지정 기간의 AI 보고서를 생성한다.
+     *
+     * @param {string} periodFrom — 시작일 (YYYY-MM-DD)
+     * @param {string} periodTo — 종료일 (YYYY-MM-DD)
+     * @returns {ReportResponse} 생성된 보고서 객체
+     */
+    async createReport(periodFrom, periodTo) {
+        return this._adminFetch("/admin/reports", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                period_type: "custom",
+                period_from: periodFrom,
+                period_to: periodTo,
+            }),
+        });
     },
 
     /** 서버 헬스체크 */

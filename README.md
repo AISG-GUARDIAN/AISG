@@ -13,38 +13,45 @@ Node.js 14 이상
 ### 설치 방법 및 실행 방법 (로컬)
 
 1. 저장소 클론
-```bash
-git clone https://github.com/AISG-GUARDIAN/AISG.git
-cd AISG
-```
+    ```bash
+    git clone https://github.com/AISG-GUARDIAN/AISG.git
+    cd AISG
+    ```
 
 2. 환경 변수 설정
 `.env` 파일을 생성하고 필요한 API 키를 설정합니다
 
 
 3. Backend 서버 실행
-```bash
-> pip을 사용하셔서 가상환경을 쓰시던 아님 uv를 쓰시던 상관없습니다.
+    ```bash
+    > pip을 사용하셔서 가상환경을 쓰시던 아님 uv를 쓰시던 상관없습니다.
 
-# 백엔드 폴더로 이동
-cd backend
+    # 백엔드 폴더로 이동
+    cd backend
 
-pip install -r backend/requirements.txt
-또는 
-uv pip install -r backend/requirements.txt
+    pip install -r requirements.txt
+    또는 
+    uv pip install -r requirements.txt
 
-# 백엔드 서버 실행
-uvicorn app.main:app --reload 
-또는
-uv run uvicorn app.main:app --reload
-```
+    # 백엔드 서버 실행
+    uvicorn app.main:app --reload 
+    또는
+    uv run uvicorn app.main:app --reload
+    ```
 
 4. 브라우저에서 `http://localhost:8000` 접속
 
 5. 테스트용 시드 데이터 삽입
-```bash
-python test_seed.py
-```
+    ```bash
+    # 백엔드 폴더로 이동
+    cd backend
+
+    # data 폴더가 존재하지 않으면 생성
+    mkdir data
+
+    # SQLite 생성 및 데이터 삽입 진행
+    python test_seed.py
+    ```
 
 
 ### Docker Compose로 실행하기
