@@ -22,6 +22,7 @@ class ReportCreate(BaseModel):
     )
     period_from: date = Field(..., description="기간 시작일")
     period_to: date = Field(..., description="기간 종료일")
+    period_type: str = Field(default="custom", description="기간 유형 (DB 저장용)")
 
 
 class ReportResponse(BaseModel):
