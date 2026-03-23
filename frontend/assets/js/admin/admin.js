@@ -146,13 +146,14 @@ async function initDashboard() {
   renderDashboardWidgets();
 }
 
-function renderDashboardWidgets() {
+async function renderDashboardWidgets() {
   renderKPI();
   renderLanguageDonut();
   renderFailDonut();
   renderHourlyChart();
   renderNationStats();
-  buildTableData();
+  await buildTableData();
+  renderCheckinTable();
   loadNotificationBadge();
 }
 
@@ -412,34 +413,46 @@ function renderNationStats() {
 // 9. 체크인 기록 테이블 (세션 API 데이터)
 // ════════════════════════════════════════════════════════════
 
-function buildTableData() {
-  TABLE_DATA = (dashData?.sessions || []).map(s => ({
-    id: `CHK-${String(s.id).padStart(4, '0')}`,
-    flag: langFlag(s.label),
-    lang: s.label,
-    date: s.checked_at.split('T')[0] || '',
-    time: s.checked_at.split('T')[1]?.slice(0, 8) || '',
-    status: (s.status === 'pass' || s.status === 'pass_override') ? 'PASS' : 'FAIL',
-  }));
+async function buildTableData() {
+  try {
+    const detail = await api.getSessionsDetail();
+    TABLE_DATA = detail.map(s => ({
+      worker_id: s.worker_id,
+      attempt_count: s.attempt_count,
+      language: s.language,
+      datetime: s.checked_at || '',
+      status: s.status,
+    }));
+  } catch (err) {
+    console.error('세션 상세 조회 실패, fallback:', err);
+    TABLE_DATA = (dashData?.sessions || []).map(s => ({
+      worker_id: `CHK-${String(s.id).padStart(4, '0')}`,
+      attempt_count: '-',
+      language: s.label,
+      datetime: s.checked_at || '',
+      status: s.status,
+    }));
+  }
 }
 
 function renderCheckinTable() {
-  const filtered = TABLE_DATA.filter(r => (curFilter === 'ALL' || r.status === curFilter));
+  const isPass = s => s === 'pass' || s === 'pass_override';
+  const filtered = TABLE_DATA.filter(r => {
+    if (curFilter === 'ALL') return true;
+    if (curFilter === 'PASS') return isPass(r.status);
+    return r.status === 'fail';
+  });
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const start = (curPage - 1) * PER_PAGE;
   const paged = filtered.slice(start, start + PER_PAGE);
 
   document.getElementById('checkin-table-body').innerHTML = paged.map(row => `
     <tr class="trow transition-colors">
-      <td class="px-6 py-4 font-bold text-blue-800 font-mono">${row.id}</td>
-      <td class="px-6 py-4">
-        <div class="flex items-center gap-2">
-          <span class="text-base">${row.flag}</span>
-          <span class="font-bold text-gray-800">${row.lang}</span>
-        </div>
-      </td>
-      <td class="px-6 py-4 text-gray-400">${row.date} ${row.time}</td>
-      <td class="px-6 py-4"><span class="font-black ${row.status === 'PASS' ? 'text-green-600' : 'text-red-600'}">${row.status}</span></td>
+      <td class="px-6 py-4 font-bold text-blue-800 font-mono">${row.worker_id}</td>
+      <td class="px-6 py-4 text-center font-bold text-gray-700">${row.attempt_count}</td>
+      <td class="px-6 py-4 font-bold text-gray-800">${row.language}</td>
+      <td class="px-6 py-4 text-gray-400">${row.datetime}</td>
+      <td class="px-6 py-4"><span class="font-black ${isPass(row.status) ? 'text-green-600' : 'text-red-600'}">${row.status}</span></td>
     </tr>
   `).join('');
 
@@ -458,6 +471,30 @@ function renderPagination(total) {
 }
 
 function goPage(p) { curPage = p; renderCheckinTable(); }
+
+/** 체크인 전체 데이터를 백엔드 CSV API로 다운로드 (세션+사원 조인) */
+async function exportCheckinCSV() {
+  const token = api.getAdminToken();
+  if (!token) { alert('관리자 인증이 필요합니다.'); return; }
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/stats/export`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `checkin_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('CSV 내보내기 실패:', err);
+    alert('CSV 내보내기에 실패했습니다.');
+  }
+}
 
 function setFilter(f) {
   curFilter = f;
@@ -479,7 +516,8 @@ const titleMap = {
   'monthly':   ['월별 데이터', '월별 체크인 종합 분석'],
   'groups':    ['그룹 관리', '작업자 그룹 생성 및 관리'],
   'workers':   ['직원 관리', '정규직 사원 및 일용직 작업자 관리'],
-  'alarm':     ['시스템 알림', '알림 및 경고 메시지']
+  'alarm':     ['시스템 알림', '알림 및 경고 메시지'],
+  'report':    ['보고서 작성', 'AI 기반 안전 점검 보고서 생성']
 };
 
 function navigate(p) {
@@ -500,6 +538,7 @@ function navigate(p) {
   if (p === 'groups') { loadGroups(); }
   if (p === 'workers') { loadWorkers(); }
   if (p === 'alarm') { loadNotifications(); }
+  if (p === 'report') { initReportPage(); }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1382,7 +1421,116 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ════════════════════════════════════════════════════════════
-// 16. 페이지 로드 진입점
+// 16. 보고서 작성 페이지
+// ════════════════════════════════════════════════════════════
+
+/** 보고서 페이지 초기화 — 날짜 기본값 + 상호 제약 설정 */
+function initReportPage() {
+  const today = new Date();
+  const toStr = today.toISOString().slice(0, 10);
+
+  const fromDate = new Date(today);
+  fromDate.setDate(fromDate.getDate() - 7);
+  const fromStr = fromDate.toISOString().slice(0, 10);
+
+  const elFrom = document.getElementById('rpt-date-from');
+  const elTo = document.getElementById('rpt-date-to');
+  if (elFrom && !elFrom.value) elFrom.value = fromStr;
+  if (elTo && !elTo.value) elTo.value = toStr;
+
+  if (elFrom) elFrom.max = toStr;
+  if (elTo) elTo.max = toStr;
+
+  // 시작일 변경 → 종료일 최소값 갱신
+  if (elFrom) elFrom.addEventListener('change', () => {
+    if (elTo) elTo.min = elFrom.value;
+    if (elTo && elTo.value && elTo.value < elFrom.value) elTo.value = elFrom.value;
+  });
+  // 종료일 변경 → 시작일 최대값 갱신
+  if (elTo) elTo.addEventListener('change', () => {
+    if (elFrom) elFrom.max = elTo.value;
+    if (elFrom && elFrom.value && elFrom.value > elTo.value) elFrom.value = elTo.value;
+  });
+}
+
+/** 보고서 생성  */
+async function generateReport() {
+  const from = document.getElementById('rpt-date-from').value;
+  const to = document.getElementById('rpt-date-to').value;
+
+  if (!from || !to) {
+    alert('시작일과 종료일을 모두 선택해주세요.');
+    return;
+  }
+  if (from > to) {
+    alert('시작일이 종료일보다 클 수 없습니다.');
+    return;
+  }
+
+  const btn = document.getElementById('rpt-generate-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>생성 중...';
+
+  const area = document.getElementById('report-result-area');
+  area.innerHTML = `
+    <div class="card p-10 text-center">
+      <i class="fas fa-spinner fa-spin text-blue-400 text-4xl mb-4"></i>
+      <h4 class="text-base font-bold text-gray-600">보고서를 생성하고 있습니다...</h4>
+      <p class="text-[11px] text-gray-400 mt-1">AI가 데이터를 분석 중입니다. 잠시만 기다려주세요.</p>
+    </div>`;
+
+  try {
+    const report = await api.createReport(from, to);
+    renderReport(report, area);
+  } catch (e) {
+    area.innerHTML = `
+      <div class="card p-10 text-center">
+        <i class="fas fa-circle-exclamation text-red-400 text-4xl mb-4"></i>
+        <h4 class="text-base font-bold text-gray-600">보고서 생성 실패</h4>
+        <p class="text-xs text-red-400 mt-1">${e.message}</p>
+      </div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-wand-magic-sparkles mr-2"></i>보고서 생성';
+  }
+}
+
+/**
+ * 보고서 응답 객체를 report-result-area에 렌더링한다.
+ * content 필드의 마크다운을 HTML로 변환하여 표시.
+ *
+ * @param {object} report — ReportResponse 객체
+ * @param {HTMLElement} area — 렌더 대상 컨테이너
+ */
+function renderReport(report, area) {
+  const statusMap = {
+    done:       ['완료', 'bg-green-50 text-green-600'],
+    processing: ['생성 중', 'bg-blue-50 text-blue-600'],
+    error:      ['오류', 'bg-red-50 text-red-600'],
+  };
+  const [statusLabel, statusClass] = statusMap[report.status] || ['알 수 없음', 'bg-gray-50 text-gray-600'];
+
+  const contentHtml = report.content
+    ? marked.parse(report.content)
+    : '<p class="text-gray-400 text-sm">보고서 내용이 없습니다.</p>';
+
+  area.innerHTML = `
+    <div class="card overflow-hidden">
+      <div class="p-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-50 to-white">
+        <div>
+          <h4 class="text-sm font-bold text-gray-800"><i class="fas fa-file-lines text-blue-600 mr-2"></i>안전 점검 보고서</h4>
+          <p class="text-[10px] text-gray-400 mt-0.5">${report.period_from} ~ ${report.period_to}</p>
+        </div>
+        <span class="${statusClass} text-[10px] font-bold px-2.5 py-1 rounded-full">
+          <i class="fas fa-circle-check mr-1"></i>${statusLabel}
+        </span>
+      </div>
+      <div class="p-6 report-content">${contentHtml}</div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// 17. 페이지 로드 진입점
 // ════════════════════════════════════════════════════════════
 
 window.addEventListener('load', () => {
