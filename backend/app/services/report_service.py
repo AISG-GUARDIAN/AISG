@@ -5,6 +5,7 @@ Azure OpenAI를 사용하여 안전 점검 통계 기반 보고서를 자동 생
 
 import json
 import logging
+from pathlib import Path
 from datetime import date
 
 from openai import AzureOpenAI
@@ -91,35 +92,45 @@ def generate_report(
 def _generate_llm_report(
     stats_json: str, period_type: str, period_from: date, period_to: date
 ) -> str:
-    """Azure OpenAI에 통계 데이터를 전달하여 보고서를 생성한다."""
     settings = get_settings()
-    period_label = {"daily": "일간", "weekly": "주간", "monthly": "월간"}.get(
-        period_type, period_type
+
+    # 🚀 1. 프롬프트 파일들이 있는 디렉토리 경로
+    prompts_dir = Path(__file__).parent.parent / "prompts"
+    
+    # 🚀 2. 시스템 프롬프트 읽기
+    try:
+        with open(prompts_dir / "report_system.md", "r", encoding="utf-8") as f:
+            system_prompt = f.read()
+    except FileNotFoundError:
+        logger.error("system_prompt.md 파일을 찾을 수 없습니다.")
+        return "시스템 프롬프트 파일 누락으로 보고서를 생성할 수 없습니다."
+
+    # 🚀 3. 유저 프롬프트(템플릿) 읽기
+    try:
+        with open(prompts_dir / "report_user.md", "r", encoding="utf-8") as f:
+            user_prompt_template = f.read()
+    except FileNotFoundError:
+        logger.error("report_prompt.md 파일을 찾을 수 없습니다.")
+        return "유저 프롬프트 파일 누락으로 보고서를 생성할 수 없습니다."
+
+    # 🚀 4. 유저 프롬프트에 변수 채워넣기
+    user_prompt = user_prompt_template.format(
+        period_from=period_from,
+        period_to=period_to,
+        stats_json=stats_json
     )
 
-    prompt = f"""다음은 현장 안전물품 착용 점검 시스템의 {period_label} 통계 데이터입니다.
-기간: {period_from} ~ {period_to}
-
-{stats_json}
-
-위 데이터를 바탕으로 다음 내용을 포함한 보고서를 작성해주세요:
-1. 기간 요약 (총 인원, 통과율)
-2. 그룹별 분석 (성적이 좋은/나쁜 그룹)
-3. 주요 이슈 및 개선 사항
-4. 권장 조치 사항
-
-보고서는 한국어로 작성하고, 간결하면서도 구체적인 수치를 포함해주세요."""
-
+    # 🚀 5. LLM API 호출 (코드가 정말 깔끔해집니다!)
     try:
         client = _get_openai_client()
         response = client.chat.completions.create(
             model=settings.AZURE_OPENAI_DEPLOYMENT,
             messages=[
-                {"role": "system", "content": "당신은 현장 안전 관리 전문 보고서 작성 AI입니다."},
-                {"role": "user", "content": prompt},
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
             ],
             temperature=0.3,
-            max_tokens=2000,
+            max_tokens=2500,
         )
         return response.choices[0].message.content
     except Exception as e:
