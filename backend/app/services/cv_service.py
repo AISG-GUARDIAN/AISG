@@ -133,7 +133,7 @@ def mosaic_face(image_data: bytes, face_rects: list) -> bytes:
         # 얼굴 영역 크롭 → 축소 → 확대 (픽셀화 효과)
         face_region = img.crop((left, top, right, bottom))
         small = face_region.resize(
-            (max(1, width // 10), max(1, height // 10)),
+            (max(1, width // 20), max(1, height // 20)), # 블러 처리 2배 강화
             resample=Image.BILINEAR,
         )
         mosaic = small.resize(face_region.size, resample=Image.NEAREST)
