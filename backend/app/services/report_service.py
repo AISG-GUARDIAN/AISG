@@ -8,7 +8,8 @@ import logging
 from pathlib import Path
 from datetime import date
 
-from openai import AzureOpenAI
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -16,17 +17,6 @@ from app.models.report import Report
 from app.services.stats_service import get_stats_for_period
 
 logger = logging.getLogger(__name__)
-
-
-def _get_openai_client() -> AzureOpenAI:
-    """Azure OpenAI 클라이언트를 생성한다."""
-    settings = get_settings()
-    return AzureOpenAI(
-        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
-        api_key=settings.AZURE_OPENAI_KEY,
-        api_version="2024-08-01-preview",
-    )
-
 
 def generate_report(
     db: Session, admin_id: int, period_type: str, period_from: date, period_to: date
@@ -94,49 +84,59 @@ def _generate_llm_report(
 ) -> str:
     settings = get_settings()
 
-    # 🚀 1. 프롬프트 파일들이 있는 디렉토리 경로
+    # 🚀 생략되었던 프롬프트 파일 읽기 로직 복구
     prompts_dir = Path(__file__).parent.parent / "prompts"
-    
-    # 🚀 2. 시스템 프롬프트 읽기
     try:
         with open(prompts_dir / "report_system.md", "r", encoding="utf-8") as f:
             system_prompt = f.read()
-    except FileNotFoundError:
-        logger.error("system_prompt.md 파일을 찾을 수 없습니다.")
-        return "시스템 프롬프트 파일 누락으로 보고서를 생성할 수 없습니다."
-
-    # 🚀 3. 유저 프롬프트(템플릿) 읽기
-    try:
         with open(prompts_dir / "report_user.md", "r", encoding="utf-8") as f:
             user_prompt_template = f.read()
-    except FileNotFoundError:
-        logger.error("report_prompt.md 파일을 찾을 수 없습니다.")
-        return "유저 프롬프트 파일 누락으로 보고서를 생성할 수 없습니다."
+    except FileNotFoundError as e:
+        logger.error(f"프롬프트 파일 누락: {e}")
+        return "프롬프트 파일이 없어 보고서를 생성할 수 없습니다."
 
-    # 🚀 4. 유저 프롬프트에 변수 채워넣기
     user_prompt = user_prompt_template.format(
-        period_from=period_from,
-        period_to=period_to,
-        stats_json=stats_json
+        period_from=period_from, period_to=period_to, stats_json=stats_json
     )
 
-    # 🚀 5. LLM API 호출 (코드가 정말 깔끔해집니다!)
-    try:
-        client = _get_openai_client()
-        response = client.chat.completions.create(
-            model=settings.AZURE_OPENAI_DEPLOYMENT,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.3,
-            max_tokens=2500,
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        logger.error(f"LLM 보고서 생성 실패: {e}")
-        return f"보고서 생성 중 오류가 발생했습니다: {str(e)}"
+    # 1. API 키를 사용한 확실한 클라이언트 인증
+    project_client = AIProjectClient(
+        endpoint=settings.AZURE_AIPROJECT_ENDPOINT,
+        credential=DefaultAzureCredential()
+    )
 
+    try:
+        agent_client = project_client.get_openai_client()
+
+        # 2. PDF 문서를 참조하는 에이전트 호출
+        response = agent_client.responses.create(
+            input=[
+                {"type": "message", "role": "system", "content": system_prompt},
+                {"type": "message", "role": "user", "content": user_prompt},
+            ],
+            extra_body={
+                "agent_reference": {
+                    "name": settings.AZURE_AGENT_NAME,
+                    "version": settings.AZURE_AGENT_VERSION,
+                    "type": "agent_reference"
+                }
+            },
+        )
+
+        # 3. PDF 사용 확인 및 결과 반환
+        result_text = response.output_text
+        if hasattr(response, 'citations') and response.citations:
+            logger.info("✅ 에이전트가 성공적으로 PDF 문서 인용에 성공했습니다!")
+            
+            # 하단에 출처 표시
+            sources = set([c.get('filepath', '법령 문서') for c in response.citations])
+            footer = "\n\n---\n**📂 법적 근거 문헌:**\n" + "\n".join([f"- {s}" for s in sources])
+            return result_text + footer
+        
+        return result_text
+
+    finally:
+        project_client.close()
 
 def _generate_fallback_report(
     stats_data: dict, period_type: str, period_from: date, period_to: date
