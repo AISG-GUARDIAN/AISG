@@ -42,9 +42,12 @@ class Settings(BaseSettings):
     AZURE_FACE_KEY: str = ""
 
     # Azure OpenAI (보고서 생성)
-    AZURE_OPENAI_ENDPOINT: str = ""
+    AZURE_AIPROJECT_ENDPOINT: str = ""
     AZURE_OPENAI_KEY: str = ""
-    AZURE_OPENAI_DEPLOYMENT: str = "gpt-4o"
+    AZURE_AGENT_NAME: str = ""
+    AZURE_AGENT_VERSION: str = ""
+    AZURE_AGENT_VECTOR_STORE_ID: str = ""
+    AZURE_OPENAI_DEPLOYMENT: str = ""
 
     # 데이터베이스
     DATABASE_URL: str = "sqlite:///./safety_check.db"
