@@ -8,7 +8,8 @@ import logging
 from pathlib import Path
 from datetime import date
 
-from openai import AzureOpenAI
+from azure.ai.projects import AIProjectClient
+from azure.identity import DefaultAzureCredential
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -98,46 +99,42 @@ def _generate_llm_report(
         period_from=period_from, period_to=period_to, stats_json=stats_json
     )
 
-    # 1. API 키를 사용한 AzureOpenAI 클라이언트 인증
-    client = AzureOpenAI(
-        azure_endpoint=settings.AZURE_AIPROJECT_ENDPOINT,
-        api_key=settings.AZURE_OPENAI_KEY,
-        api_version="2024-12-01-preview",
+    # 1. DefaultAzureCredential 기반 클라이언트 인증 (Managed Identity 필요)
+    project_client = AIProjectClient(
+        endpoint=settings.AZURE_AIPROJECT_ENDPOINT,
+        credential=DefaultAzureCredential(),
     )
 
-    # 2. Vector Store(PDF 문서)를 참조하여 보고서 생성
-    response = client.responses.create(
-        model=settings.AZURE_OPENAI_DEPLOYMENT,
-        input=[
-            {"type": "message", "role": "system", "content": system_prompt},
-            {"type": "message", "role": "user", "content": user_prompt},
-        ],
-        tools=[{
-            "type": "file_search",
-            "vector_store_ids": [settings.AZURE_AGENT_VECTOR_STORE_ID],
-        }],
-    )
+    try:
+        agent_client = project_client.get_openai_client()
 
-    # 3. 결과 반환 — 인용 정보가 있으면 출처 표시
-    result_text = response.output_text
-    annotations = []
-    for item in response.output:
-        if hasattr(item, "content"):
-            for block in item.content:
-                if hasattr(block, "annotations"):
-                    annotations.extend(block.annotations)
+        # 2. PDF 문서를 참조하는 에이전트 호출
+        response = agent_client.responses.create(
+            input=[
+                {"type": "message", "role": "system", "content": system_prompt},
+                {"type": "message", "role": "user", "content": user_prompt},
+            ],
+            extra_body={
+                "agent_reference": {
+                    "name": settings.AZURE_AGENT_NAME,
+                    "version": settings.AZURE_AGENT_VERSION,
+                    "type": "agent_reference"
+                }
+            },
+        )
 
-    if annotations:
-        logger.info("에이전트가 PDF 문서를 인용하여 보고서를 생성했습니다.")
-        sources = set()
-        for ann in annotations:
-            if hasattr(ann, "filename"):
-                sources.add(ann.filename)
-        if sources:
+        # 3. PDF 사용 확인 및 결과 반환
+        result_text = response.output_text
+        if hasattr(response, 'citations') and response.citations:
+            logger.info("에이전트가 PDF 문서를 인용하여 보고서를 생성했습니다.")
+            sources = set([c.get('filepath', '법령 문서') for c in response.citations])
             footer = "\n\n---\n**법적 근거 문헌:**\n" + "\n".join([f"- {s}" for s in sources])
             return result_text + footer
 
-    return result_text
+        return result_text
+
+    finally:
+        project_client.close()
 
 def _generate_fallback_report(
     stats_data: dict, period_type: str, period_from: date, period_to: date
