@@ -102,7 +102,7 @@ def _generate_llm_report(
     client = AzureOpenAI(
         azure_endpoint=settings.AZURE_AIPROJECT_ENDPOINT,
         api_key=settings.AZURE_OPENAI_KEY,
-        api_version="2025-03-01-preview",
+        api_version="2024-12-01-preview",
     )
 
     # 2. Vector Store(PDF 문서)를 참조하여 보고서 생성
